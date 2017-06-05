@@ -523,18 +523,18 @@ void BikeTask(void)
 		//bike.Speed = GetSpeed()*1000UL/config.SpeedScale;
 
 		speed_mode = 0;
-		if ( HAL_GPIO_ReadPin(SPMODE1_PORT, SPMODE1_PIN	) ) speed_mode |= 1<<0;
-		if ( HAL_GPIO_ReadPin(SPMODE2_PORT, SPMODE2_PIN	) ) speed_mode |= 1<<1;
-		if ( HAL_GPIO_ReadPin(SPMODE3_PORT, SPMODE3_PIN	) ) speed_mode |= 1<<2;
-		//if ( HAL_GPIO_ReadPin(SPMODE4_PORT, SPMODE4_PIN	) ) speed_mode |= 1<<3;
-		
-		switch(speed_mode){
-			case 0x01: bike.SpeedMode = 1; break;
-			case 0x02: bike.SpeedMode = 2; break;
-			case 0x04: bike.SpeedMode = 3; break;
-			case 0x08: bike.SpeedMode = 4; break;
-			default:	 bike.SpeedMode = 0; break;
-		}
+//		if ( HAL_GPIO_ReadPin(SPMODE1_PORT, SPMODE1_PIN	) ) speed_mode |= 1<<0;
+//		if ( HAL_GPIO_ReadPin(SPMODE2_PORT, SPMODE2_PIN	) ) speed_mode |= 1<<1;
+//		if ( HAL_GPIO_ReadPin(SPMODE3_PORT, SPMODE3_PIN	) ) speed_mode |= 1<<2;
+//		//if ( HAL_GPIO_ReadPin(SPMODE4_PORT, SPMODE4_PIN	) ) speed_mode |= 1<<3;
+//		
+//		switch(speed_mode){
+//			case 0x01: bike.SpeedMode = 1; break;
+//			case 0x02: bike.SpeedMode = 2; break;
+//			case 0x04: bike.SpeedMode = 3; break;
+//			case 0x08: bike.SpeedMode = 4; break;
+//			default:	 bike.SpeedMode = 0; break;
+//		}
 	}
 	
 	MileTask();
@@ -704,9 +704,10 @@ void MediaTask(void)
 	static uint32_t pre_key=0;
 	static uint32_t index =0;
 	static uint8_t st_buf[4];
+	static uint8_t  value=0;
 	
 	uint32_t key;
-	uint8_t cmd=0;
+	uint8_t cmd_buf[16];
 	uint8_t dat;
 	
 	key = GetKey(KEY_ALL);
@@ -716,36 +717,45 @@ void MediaTask(void)
 	bike.FM		= 1;
 	
 	if ( key == 0 ) {
+		cmd_buf[0] = 0xAA;
+		cmd_buf[1] = 0x00;
+		cmd_buf[2] = 0x00;
+		cmd_buf[3] = 0x00;
+		cmd_buf[4] = 0xEF;
 		if ( pre_key == KEY_PLAY ){
 			if ( bike.Play == 0 && bike.Pause == 0 ) {
-				bike.Play = 1;bike.Pause = 0;cmd = 0x02;
-				if ( HAL_UART_Transmit(&huart1, &cmd, 1, 5000)!= HAL_OK)	Error_Handler();
+				bike.Play = 1;bike.Pause = 0;cmd_buf[1] = 0x01;
+				if ( HAL_UART_Transmit(&huart1, cmd_buf, 5, 5000)!= HAL_OK)	Error_Handler();
 			} else if ( bike.Play ) {
-				bike.Play = 0;bike.Pause = 1;cmd = 0x02;
-				if ( HAL_UART_Transmit(&huart1, &cmd, 1, 5000)!= HAL_OK)	Error_Handler();
+				bike.Play = 0;bike.Pause = 1;cmd_buf[1] = 0x01;
+				if ( HAL_UART_Transmit(&huart1, cmd_buf, 5, 5000)!= HAL_OK)	Error_Handler();
 			} else if ( bike.Pause ) {
-				bike.Play = 1;bike.Pause = 0;cmd = 0x02;
-				if ( HAL_UART_Transmit(&huart1, &cmd, 1, 5000)!= HAL_OK)	Error_Handler();
+				bike.Play = 1;bike.Pause = 0;cmd_buf[1] = 0x02;
+				if ( HAL_UART_Transmit(&huart1, cmd_buf, 5, 5000)!= HAL_OK)	Error_Handler();
 			}
 		} else if ( pre_key == KEY_NEXT ){
-			cmd = 0x04;
-			if ( HAL_UART_Transmit(&huart1, &cmd, 1, 5000)!= HAL_OK)	Error_Handler();
+			cmd_buf[1] = 0x03;
+			if ( HAL_UART_Transmit(&huart1, cmd_buf, 5, 5000)!= HAL_OK)	Error_Handler();
 		} else if ( pre_key == KEY_PRE ){
-			cmd = 0x03;
-			if ( HAL_UART_Transmit(&huart1, &cmd, 1, 5000)!= HAL_OK)	Error_Handler();
+			cmd_buf[1] = 0x04;
+			if ( HAL_UART_Transmit(&huart1, cmd_buf, 5, 5000)!= HAL_OK)	Error_Handler();
 		} else if ( pre_key == KEY_VOLUP ){
-			cmd = 0x06;
-			if ( HAL_UART_Transmit(&huart1, &cmd, 1, 5000)!= HAL_OK)	Error_Handler();
+			if ( ++value > 9 ) value = 9;			
+			cmd_buf[1] = 0x30;
+			cmd_buf[3] = value;
+			if ( HAL_UART_Transmit(&huart1, cmd_buf, 5, 5000)!= HAL_OK)	Error_Handler();
 		} else if ( pre_key == KEY_VOLDOWN ){
-			cmd = 0x07;
-			if ( HAL_UART_Transmit(&huart1, &cmd, 1, 5000)!= HAL_OK)	Error_Handler();
+			if ( value ) value --;			
+			cmd_buf[1] = 0x30;
+			cmd_buf[3] = value;
+			if ( HAL_UART_Transmit(&huart1, cmd_buf, 5, 5000)!= HAL_OK)	Error_Handler();
 		}
 	}	
 	
   if ( HAL_UART_Receive(&huart1, st_buf, 2, 2) == HAL_OK ){
     st_buf[index++] = dat;
     if ( index >= sizeof(st_buf) ) index = 0;
-		if ( index >= 1 && uart_buf[index-1] == '\n' ){
+		if ( index >= 1 && uart_buf[index-1] == 0xEF ){
 			index = 0;
     }
   }

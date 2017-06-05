@@ -102,7 +102,7 @@ unsigned int Get_ElapseTick(unsigned int pre_tick);
 #define PCB_VER	0022
 //#define PCB_VER	0041
 
-#define ADC_TEMP_CH			ADC_CHANNEL_8
+#define ADC_TEMP_CH			ADC_CHANNEL_4
 #define ADC_VOL_CH			ADC_CHANNEL_7
 #define ADC_SPEED_CH		ADC_CHANNEL_0
 
