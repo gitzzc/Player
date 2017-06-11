@@ -240,7 +240,7 @@ uint32_t GetKey(uint32_t key)
 	return (keycode & key);
 }
 
- const uint32_t NTC_B3950[][2] = 
+ const int32_t NTC_B3950[][2] = 
  {
 	 401860,	-400,	281577,	-350,	200204,	-300,	144317,	-250,	105385,	-200,
 	 77898,		-150,	58246,	-100,	44026,	-50,	33621,	0,		25925,	50,
@@ -452,7 +452,7 @@ void BikeTask(void)
 {
 	uint32_t speed_mode=0;
 	static uint32_t count=0;
-	static uint32_t pre_NearLight=0,pre_TurnRight=0,pre_TurnLeft=0,pre_LRFlash=0;
+	static uint32_t pre_NearLight=0,pre_TurnRight=0,pre_TurnLeft=0,pre_LRFlash=0,pre_Braked=0;
 
 	if ( GetKey(KEY_NEARLIGHT) ){
 		if ( pre_NearLight == 0 ){
@@ -462,22 +462,14 @@ void BikeTask(void)
 	} else 
 		pre_NearLight = 0;
 	
-	if ( GetKey(KEY_TURNRIGHT) ){
-		if ( pre_TurnRight == 0 ){
-			if ( bike.TurnRight ) bike.TurnRight = 0; else bike.TurnRight = 1;
+	if ( GetKey(KEY_BRAKE) ){
+		if ( pre_Braked == 0 ){
+			if ( bike.Braked ) bike.Braked = 0; else bike.Braked = 1;
 		}
-		pre_TurnRight = 1;
+		pre_Braked = 1;
 	} else 
-		pre_TurnRight = 0;
-	
-	if ( GetKey(KEY_TURNLEFT) ){
-		if ( pre_TurnLeft == 0 ){
-			if ( bike.TurnLeft ) bike.TurnLeft = 0; else bike.TurnLeft = 1;
-		}
-		pre_TurnLeft = 1;
-	} else 
-		pre_TurnLeft = 0;
-
+		pre_Braked = 0;
+/*	
 	if ( GetKey(KEY_LRFLASH) ){
 		if ( pre_LRFlash == 0 ){
 			if ( bike.LRFlash ) {
@@ -493,10 +485,15 @@ void BikeTask(void)
 		pre_LRFlash = 1;
 	} else 
 		pre_LRFlash = 0;
-
-  //bike.CRZLight  	= GetKey(KEY_CRZ);
-  bike.Braked  	= GetKey(KEY_BRAKE);
-  bike.Beep	  	= GetKey(KEY_BEEP	);
+*/
+	//if ( bike.LRFlash == 0 )
+		{
+		if ( GetKey(KEY_TURNRIGHT) 	) bike.TurnRight 	= 1; else bike.TurnRight 	= 0;
+		if ( GetKey(KEY_TURNLEFT) 	) bike.TurnLeft 	= 1; else bike.TurnLeft 	= 0;
+	}
+	
+  //bike.CRZLight = GetKey(KEY_CRZ);
+  bike.Beep	  		= GetKey(KEY_BEEP	);
 	HAL_GPIO_WritePin (BrakeOut_PORT		,BrakeOut_PIN			,bike.Braked		?GPIO_PIN_SET:GPIO_PIN_RESET);
 	HAL_GPIO_WritePin (BeepOut_PORT			,BeepOut_PIN			,bike.Beep			?GPIO_PIN_SET:GPIO_PIN_RESET);
 
@@ -602,11 +599,11 @@ void TimeTask(void)
 							else { 
 								if ( (bike.Hour % 10 ) > 3 ) bike.Hour += 10; else bike.Hour += 20; 
 							}
-				break;
+			break;
 			case 1:	if ( bike.Hour % 10 )	bike.Hour --;			
 							else {
 								if ( bike.Hour >= 20 ) bike.Hour = bike.Hour/10*10 + 3; else bike.Hour = bike.Hour/10*10+9; 
-			}
+							}
 							break;
 			case 2: if ( bike.Minute>= 10 ) bike.Minute	-= 10;	else bike.Minute+= 50; break;
 			case 3:	if ( bike.Minute%  10 ) bike.Minute --; 		else bike.Minute = bike.Minute/10*10 + 9; break;
@@ -703,14 +700,14 @@ void MediaTask(void)
 {
 	static uint32_t pre_key=0;
 	static uint32_t index =0;
-	static uint8_t st_buf[4];
+	static uint8_t st_buf[16];
 	static uint8_t  value=0;
 	
 	uint32_t key;
 	uint8_t cmd_buf[16];
 	uint8_t dat;
 	
-	key = GetKey(KEY_ALL);
+	key = GetKey(KEY_NEXT|KEY_PRE|KEY_VOLUP|KEY_VOLDOWN|KEY_PLAY);
 	
 	bike.BT		= 1;
 	bike.MP3	= 1;
@@ -718,19 +715,17 @@ void MediaTask(void)
 	
 	if ( key == 0 ) {
 		cmd_buf[0] = 0xAA;
-		cmd_buf[1] = 0x00;
+		cmd_buf[1] = 0x40;
 		cmd_buf[2] = 0x00;
-		cmd_buf[3] = 0x00;
+		cmd_buf[3] = 0x01;
 		cmd_buf[4] = 0xEF;
 		if ( pre_key == KEY_PLAY ){
-			if ( bike.Play == 0 && bike.Pause == 0 ) {
-				bike.Play = 1;bike.Pause = 0;cmd_buf[1] = 0x01;
+			if ( HAL_UART_Transmit(&huart1, cmd_buf, 5, 5000)!= HAL_OK)	Error_Handler();
+			if ( (bike.Play == 0 && bike.Pause == 0) || bike.Pause ) {
+				bike.Play = 1;bike.Pause = 0;cmd_buf[1] = 0x01;cmd_buf[3] = 0x00;
 				if ( HAL_UART_Transmit(&huart1, cmd_buf, 5, 5000)!= HAL_OK)	Error_Handler();
 			} else if ( bike.Play ) {
-				bike.Play = 0;bike.Pause = 1;cmd_buf[1] = 0x01;
-				if ( HAL_UART_Transmit(&huart1, cmd_buf, 5, 5000)!= HAL_OK)	Error_Handler();
-			} else if ( bike.Pause ) {
-				bike.Play = 1;bike.Pause = 0;cmd_buf[1] = 0x02;
+				bike.Play = 0;bike.Pause = 1;cmd_buf[1] = 0x02;cmd_buf[3] = 0x00;
 				if ( HAL_UART_Transmit(&huart1, cmd_buf, 5, 5000)!= HAL_OK)	Error_Handler();
 			}
 		} else if ( pre_key == KEY_NEXT ){
@@ -752,10 +747,10 @@ void MediaTask(void)
 		}
 	}	
 	
-  if ( HAL_UART_Receive(&huart1, st_buf, 2, 2) == HAL_OK ){
+  if ( HAL_UART_Receive(&huart1, st_buf, 12, 10) == HAL_OK ){
     st_buf[index++] = dat;
     if ( index >= sizeof(st_buf) ) index = 0;
-		if ( index >= 1 && uart_buf[index-1] == 0xEF ){
+		if ( index >= 1 && st_buf[index-1] == 0xEF ){
 			index = 0;
     }
   }
@@ -780,7 +775,7 @@ static void EXTI4_15_IRQHandler_Config(void)
   /* Configure PA.00 pin as input floating */
   GPIO_InitStructure.Mode = GPIO_MODE_IT_FALLING;
   GPIO_InitStructure.Pull = GPIO_NOPULL;
-  GPIO_InitStructure.Pin = GPIO_PIN_5;
+  GPIO_InitStructure.Pin = GPIO_PIN_6;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStructure);
 
   /* Enable and set EXTI line 0 Interrupt to the lowest priority */
@@ -795,7 +790,7 @@ static void EXTI4_15_IRQHandler_Config(void)
   */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
-  if (GPIO_Pin == GPIO_PIN_5)
+  if (GPIO_Pin == GPIO_PIN_6)
   {
     hall_count++;
   }
@@ -806,7 +801,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 	static uint32_t pre_tick=0;
 	uint32_t speed,tick;
 	
-  if (GPIO_Pin == GPIO_PIN_5)
+  if (GPIO_Pin == GPIO_PIN_6)
   {
     hall_count++;
 		tick = HAL_GetTick();
@@ -840,7 +835,7 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_I2C1_Init();
-  MX_TIM3_Init();
+  //MX_TIM3_Init();
   MX_USART1_UART_Init();
   //MX_USART2_UART_Init();
   MX_ADC_Init();
@@ -1003,7 +998,7 @@ static void MX_ADC_Init(void)
 
     /**Configure for the selected ADC regular channel to be converted. 
     */
-  sConfig.Channel = ADC_CHANNEL_0;
+  sConfig.Channel = ADC_CHANNEL_4;
   sConfig.Rank = ADC_RANK_CHANNEL_NUMBER;
   sConfig.SamplingTime = ADC_SAMPLETIME_239CYCLES_5;
   if (HAL_ADC_ConfigChannel(&hadc, &sConfig) != HAL_OK)
@@ -1021,11 +1016,11 @@ static void MX_ADC_Init(void)
 
     /**Configure for the selected ADC regular channel to be converted. 
     */
-  sConfig.Channel = ADC_CHANNEL_8;
-  if (HAL_ADC_ConfigChannel(&hadc, &sConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
+//  sConfig.Channel = ADC_CHANNEL_8;
+//  if (HAL_ADC_ConfigChannel(&hadc, &sConfig) != HAL_OK)
+//  {
+//    Error_Handler();
+//  }
 
 }
 
@@ -1211,22 +1206,21 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOF, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PA1 PA2 PA4 PA5 */
-  GPIO_InitStruct.Pin = GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_4|GPIO_PIN_5;
+  /*Configure GPIO pins : PA0 PA1 PA15*/
+  GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_15;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_PULLDOWN;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PB1 PB4 PB5 PB8 
-                           PB9 */
-  GPIO_InitStruct.Pin = GPIO_PIN_1|GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_8 
+  /*Configure GPIO pins : PB3 PB4 PB8 PB9 */
+  GPIO_InitStruct.Pin = GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_8 
                           |GPIO_PIN_9;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PB2 PB10 PB11 */
-  GPIO_InitStruct.Pin = GPIO_PIN_2|GPIO_PIN_10|GPIO_PIN_11;
+  /*Configure GPIO pins : PB0 PB1 PB2 PB10 PB11 */
+  GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_10|GPIO_PIN_11;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
