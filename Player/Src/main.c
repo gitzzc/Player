@@ -469,7 +469,7 @@ void BikeTask(void)
 		pre_Braked = 1;
 	} else 
 		pre_Braked = 0;
-/*	
+
 	if ( GetKey(KEY_LRFLASH) ){
 		if ( pre_LRFlash == 0 ){
 			if ( bike.LRFlash ) {
@@ -485,9 +485,8 @@ void BikeTask(void)
 		pre_LRFlash = 1;
 	} else 
 		pre_LRFlash = 0;
-*/
-	//if ( bike.LRFlash == 0 )
-		{
+
+	if ( bike.LRFlash == 0 ){
 		if ( GetKey(KEY_TURNRIGHT) 	) bike.TurnRight 	= 1; else bike.TurnRight 	= 0;
 		if ( GetKey(KEY_TURNLEFT) 	) bike.TurnLeft 	= 1; else bike.TurnLeft 	= 0;
 	}
@@ -1209,7 +1208,7 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pins : PA0 PA1 PA15*/
   GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_15;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /*Configure GPIO pins : PB3 PB4 PB8 PB9 */
