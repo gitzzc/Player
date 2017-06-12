@@ -492,7 +492,8 @@ void BikeTask(void)
 	}
 	
   //bike.CRZLight = GetKey(KEY_CRZ);
-  bike.Beep	  		= GetKey(KEY_BEEP	);
+	if ( GetKey(KEY_BEEP) 	) bike.Beep 	= 1; else bike.Beep 	= 0;
+
 	HAL_GPIO_WritePin (BrakeOut_PORT		,BrakeOut_PIN			,bike.Braked		?GPIO_PIN_SET:GPIO_PIN_RESET);
 	HAL_GPIO_WritePin (BeepOut_PORT			,BeepOut_PIN			,bike.Beep			?GPIO_PIN_SET:GPIO_PIN_RESET);
 
