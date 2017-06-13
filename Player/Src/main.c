@@ -721,6 +721,7 @@ void MediaTask(void)
 		cmd_buf[4] = 0xEF;
 		if ( pre_key == KEY_PLAY ){
 			if ( HAL_UART_Transmit(&huart1, cmd_buf, 5, 5000)!= HAL_OK)	Error_Handler();
+			HAL_Delay(100);
 			if ( (bike.Play == 0 && bike.Pause == 0) || bike.Pause ) {
 				bike.Play = 1;bike.Pause = 0;cmd_buf[1] = 0x01;cmd_buf[3] = 0x00;
 				if ( HAL_UART_Transmit(&huart1, cmd_buf, 5, 5000)!= HAL_OK)	Error_Handler();
