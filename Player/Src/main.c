@@ -31,9 +31,15 @@
   ******************************************************************************
   */
 /* Includes ------------------------------------------------------------------*/
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
+#include <stdint.h>
+
 #include "main.h"
 #include "stm32f0xx_hal.h"
 #include "main.h"
+
 
 /* USER CODE BEGIN Includes */
 #include "bike.h"
@@ -789,6 +795,7 @@ static void EXTI4_15_IRQHandler_Config(void)
   * @param GPIO_Pin: Specifies the pins connected EXTI line
   * @retval None
   */
+#if 0
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
   if (GPIO_Pin == GPIO_PIN_6)
@@ -796,7 +803,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
     hall_count++;
   }
 }
-#if 0
+#else
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
 	static uint32_t pre_tick=0;
@@ -806,10 +813,11 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
   {
     hall_count++;
 		tick = HAL_GetTick();
-		speed = labs(tick - pre_tick);
-		pre_tick = tick;
+		if ( tick >= pre_tick ) speed = tick - tick_1s;
+		else speed = UINT32_MAX - pre_tick + tick;
+
 		if ( speed )
-			bike.Speed = 1000/speed * PERIMETER * 60 * 60 / 1000 / 1000;	
+			bike.Speed = PERIMETER * 60 * 60 / 1000 / speed;	
 		else
 			bike.Speed = 0;
   }
