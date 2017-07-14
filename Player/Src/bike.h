@@ -45,7 +45,7 @@ typedef struct {
 	uint32_t ECO			:1;
 	uint32_t R				:1;
 	uint32_t Charge		:1;
-	uint32_t MP3			:1;
+	uint32_t USB			:1;
 	uint32_t BT				:1;
 	uint32_t FM				:1;
 	uint32_t Play			:1;
@@ -53,12 +53,13 @@ typedef struct {
 	uint32_t HasTimer	:1;
 	uint32_t time_set	:1;
 	
-	uint32_t SpeedMode	;
+	uint32_t SpeedMode;
 	int32_t  Temperature;
 	uint32_t Voltage;	
 	uint32_t BatStatus;
 	uint32_t Speed;
 	uint32_t Mile;
+	uint32_t Number;
 	
 	uint32_t Hour;
 	uint32_t Minute;
@@ -74,6 +75,7 @@ typedef struct {
 	uint32_t TempScale	;
 	uint32_t SpeedScale;
 	uint32_t Mile;
+	uint32_t FM_Freq[32];
 	uint32_t Sum;
 } BIKE_CONFIG,*pBIKE_CONFIG;
 	

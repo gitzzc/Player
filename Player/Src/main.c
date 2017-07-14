@@ -72,6 +72,9 @@ uint32_t vol_buf[32];
 int32_t temp_buf[10];
 uint8_t uart_buf[8];
 const uint16_t* BatStatus;
+uint8_t uart1_rx[1];
+uint8_t uart1_buf[32];
+uint8_t uart1_index = 0;
 
 
 BIKE_STATUS bike;
@@ -218,19 +221,19 @@ void KeyTask()
 
 	MX_GPIO_Init();
 	
-	key |=!HAL_GPIO_ReadPin(Next_PORT		, Next_PIN			)?(KEY_NEXT		):0;
-	key |=!HAL_GPIO_ReadPin(Pre_PORT		,	Pre_PIN				)?(KEY_PRE		):0;
-	key |=!HAL_GPIO_ReadPin(VolUp_PORT	, VolUp_PIN			)?(KEY_VOLUP	):0;
-	key |=!HAL_GPIO_ReadPin(VolDown_PORT, VolDown_PIN		)?(KEY_VOLDOWN):0;
-	key |=!HAL_GPIO_ReadPin(Play_PORT		, Play_PIN			)?(KEY_PLAY		):0;
-	//key |=!HAL_GPIO_ReadPin(CRZLight_PORT,CRZLight_PIN	)?(KEY_CRZ		):0;
-	key |=!HAL_GPIO_ReadPin(TurnLeft_PORT,TurnLeft_PIN	)?(KEY_TURNLEFT):0;
+	key |=!HAL_GPIO_ReadPin(Next_PORT	, Next_PIN		)?(KEY_NEXT		):0;
+	key |=!HAL_GPIO_ReadPin(Pre_PORT	, Pre_PIN		)?(KEY_PRE		):0;
+	key |=!HAL_GPIO_ReadPin(VolUp_PORT	, VolUp_PIN		)?(KEY_VOLUP	):0;
+	key |=!HAL_GPIO_ReadPin(VolDown_PORT, VolDown_PIN	)?(KEY_VOLDOWN	):0;
+	key |=!HAL_GPIO_ReadPin(Play_PORT	, Play_PIN		)?(KEY_PLAY		):0;
+	//key |=!HAL_GPIO_ReadPin(CRZLight_PORT,CRZLight_PIN)?(KEY_CRZ		):0;
+	key |=!HAL_GPIO_ReadPin(TurnLeft_PORT,TurnLeft_PIN	)?(KEY_TURNLEFT	):0;
 	key |=!HAL_GPIO_ReadPin(TurnRight_PORT,TurnRight_PIN)?(KEY_TURNRIGHT):0;
-	key |=!HAL_GPIO_ReadPin(LRFlash_PORT, LRFlash_PIN		)?(KEY_LRFLASH)	 :0;
+	key |=!HAL_GPIO_ReadPin(LRFlash_PORT, LRFlash_PIN	)?(KEY_LRFLASH	):0;
 	key |=!HAL_GPIO_ReadPin(NearLight_PORT,NearLight_PIN)?(KEY_NEARLIGHT):0;
-	key |=!HAL_GPIO_ReadPin(Beep_PORT		, Beep_PIN			)?(KEY_BEEP			):0;
-	key |=!HAL_GPIO_ReadPin(Brake_PORT	, Brake_PIN			)?(KEY_BRAKE		):0;
-	key |=!HAL_GPIO_ReadPin(FM_PORT			, FM_PIN				)?(KEY_FM				):0;
+	key |=!HAL_GPIO_ReadPin(Beep_PORT	, Beep_PIN		)?(KEY_BEEP		):0;
+	key |=!HAL_GPIO_ReadPin(Brake_PORT	, Brake_PIN		)?(KEY_BRAKE	):0;
+	key |=!HAL_GPIO_ReadPin(FM_PORT		, FM_PIN		)?(KEY_FM		):0;
 	
 	if ( key == pre_key ){
 		if ( counter ++ >= 10 )
@@ -246,38 +249,38 @@ uint32_t GetKey(uint32_t key)
 	return (keycode & key);
 }
 
- const int32_t NTC_B3950[][2] = 
- {
-	 401860,	-400,	281577,	-350,	200204,	-300,	144317,	-250,	105385,	-200,
-	 77898,		-150,	58246,	-100,	44026,	-50,	33621,	0,		25925,	50,
-	 20175,		100,	15837,	150,	12535,	200,	10000,	250,	8037,		300,
-	 6506,		350,	5301,		400,	4348,		450,	3588,		500,	2978,		550,
-	 2978,		600,	2086,		650,	1760,		700,	1492,		750,	1270,		800,
-	 1087,		850,	934,		900,	805,		950,	698,		1000
- };
+const int32_t NTC_B3950[][2] = 
+{
+	401860,	-400,	281577,	-350,	200204,	-300,	144317,	-250,	105385,	-200,
+	77898,		-150,	58246,	-100,	44026,	-50,	33621,	0,		25925,	50,
+	20175,		100,	15837,	150,	12535,	200,	10000,	250,	8037,	300,
+	6506,		350,	5301,	400,	4348,	450,	3588,	500,	2978,	550,
+	2978,		600,	2086,	650,	1760,	700,	1492,	750,	1270,	800,
+	1087,		850,	934,	900,	805,	950,	698,	1000
+};
 
- int NTCtoTemp(unsigned int ntc)
- {
-	 int i,j;
+int NTCtoTemp(unsigned int ntc)
+{
+	int i,j;
 
-	 if ( ntc > NTC_B3950[0][0] ){
-		 return -999;
-	 } else {
-		 for(i=0;i<sizeof(NTC_B3950)/sizeof(NTC_B3950[0][0])/2-1;i++){
-			 if ( ntc <= NTC_B3950[i][0] && ntc > NTC_B3950[i+1][0] )
-				 break;
-		 }
-		 if ( i == sizeof(NTC_B3950)/sizeof(NTC_B3950[0][0])/2-1 ){
-			 return 999;
-		 } else {
-			 for(j=0;j<50;j++){
-				 if ( NTC_B3950[i][0] - (j*(NTC_B3950[i][0] - NTC_B3950[i+1][0])/50) <= ntc )
-					 return NTC_B3950[i][1] + j;
-			 }
-			 return NTC_B3950[i+1][1];
-		 }
-	 }
- }
+	if ( ntc > NTC_B3950[0][0] ){
+		return -999;
+	} else {
+		for(i=0;i<sizeof(NTC_B3950)/sizeof(NTC_B3950[0][0])/2-1;i++){
+			if ( ntc <= NTC_B3950[i][0] && ntc > NTC_B3950[i+1][0] )
+				break;
+			}
+			if ( i == sizeof(NTC_B3950)/sizeof(NTC_B3950[0][0])/2-1 ){
+				return 999;
+			} else {
+			for(j=0;j<50;j++){
+				if ( NTC_B3950[i][0] - (j*(NTC_B3950[i][0] - NTC_B3950[i+1][0])/50) <= ntc )
+					return NTC_B3950[i][1] + j;
+			}
+			return NTC_B3950[i+1][1];
+		}
+	}
+}
 
 
 int32_t GetTemp(void)
@@ -324,8 +327,8 @@ uint32_t GetVol(void)
 uint32_t GetSpeed(void)
 {
 	static uint32_t index = 0;
-  uint32_t speed;
-  uint32_t i;
+	uint32_t speed;
+	uint32_t i;
 
 	speed = Adc_Get(ADC_SPEED_CH);
 	speed_buf[index++] = speed;
@@ -376,7 +379,7 @@ void InitConfig(void)
 		config.VolScale  	= 1000;
 		config.TempScale 	= 1000;
 		config.SpeedScale	= 1000;
-		config.Mile				= 0;
+		config.Mile			= 0;
 	}
 
 	memset((uint8_t*)&bike,sizeof(bike),0);
@@ -394,19 +397,18 @@ void WriteConfig(void)
 	uint32_t i;
 	FLASH_EraseInitTypeDef EraseInitStruct;
 
-  /* Unlock the Flash to enable the flash control register access *************/
-  HAL_FLASH_Unlock();
+	/* Unlock the Flash to enable the flash control register access *************/
+	HAL_FLASH_Unlock();
 
-  /* Erase the user Flash area
-    (area defined by FLASH_USER_START_ADDR and FLASH_USER_END_ADDR) ***********/
+	/* Erase the user Flash area
+	(area defined by FLASH_USER_START_ADDR and FLASH_USER_END_ADDR) ***********/
 
-  /* Fill EraseInit structure*/
-  EraseInitStruct.TypeErase 	= FLASH_TYPEERASE_PAGES;
-  EraseInitStruct.PageAddress = FLASH_USER_START_ADDR;
-  EraseInitStruct.NbPages 		= (FLASH_USER_END_ADDR - FLASH_USER_START_ADDR + 1) / FLASH_PAGE_SIZE;
+	/* Fill EraseInit structure*/
+	EraseInitStruct.TypeErase 	= FLASH_TYPEERASE_PAGES;
+	EraseInitStruct.PageAddress 	= FLASH_USER_START_ADDR;
+	EraseInitStruct.NbPages 		= (FLASH_USER_END_ADDR - FLASH_USER_START_ADDR + 1) / FLASH_PAGE_SIZE;
 
-  if (HAL_FLASHEx_Erase(&EraseInitStruct, &PageError) != HAL_OK)
-	{}
+	if (HAL_FLASHEx_Erase(&EraseInitStruct, &PageError) != HAL_OK){}
 		
 	config.bike[0] = 'b';
 	config.bike[1] = 'i';
@@ -417,12 +419,12 @@ void WriteConfig(void)
 		
 	Address = FLASH_USER_START_ADDR;
 	for(i=0;i<sizeof(BIKE_CONFIG)/4;i++){
-    HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, Address+i*4, dat[i]);
+		HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, Address+i*4, dat[i]);
 	}
 	
-  /* Lock the Flash to disable the flash control register access (recommended
-     to protect the FLASH memory against possible unwanted operation) *********/
-  HAL_FLASH_Lock();
+	/* Lock the Flash to disable the flash control register access (recommended
+	to protect the FLASH memory against possible unwanted operation) *********/
+	HAL_FLASH_Lock();
 }
 
 uint32_t GetBatStatus(uint32_t vol)
@@ -442,16 +444,16 @@ void MileTask(void)
 	speed = bike.Speed;
 	if ( speed > DISPLAY_MAX_SPEED ) speed = DISPLAY_MAX_SPEED;
 	
-  Fmile = Fmile + speed;
-  if(Fmile > 36000)
-  {
-    Fmile = 0;
-    bike.Mile++;
+	Fmile = Fmile + speed;
+	if(Fmile > 36000)
+	{
+		Fmile = 0;
+		bike.Mile++;
 		if ( bike.Mile > 99999 )
 			bike.Mile = 0;
 		config.Mile = bike.Mile;
 		WriteConfig();
-  }  
+	}  
 }
 
 void BikeTask(void)
@@ -500,25 +502,27 @@ void BikeTask(void)
   //bike.CRZLight = GetKey(KEY_CRZ);
 	if ( GetKey(KEY_BEEP) 	) bike.Beep 	= 1; else bike.Beep 	= 0;
 
-	HAL_GPIO_WritePin (BrakeOut_PORT		,BrakeOut_PIN			,bike.Braked		?GPIO_PIN_SET:GPIO_PIN_RESET);
-	HAL_GPIO_WritePin (BeepOut_PORT			,BeepOut_PIN			,bike.Beep			?GPIO_PIN_SET:GPIO_PIN_RESET);
+	HAL_GPIO_WritePin (BrakeOut_PORT,BrakeOut_PIN	,bike.Braked?GPIO_PIN_SET:GPIO_PIN_RESET);
+	HAL_GPIO_WritePin (BeepOut_PORT	,BeepOut_PIN	,bike.Beep	?GPIO_PIN_SET:GPIO_PIN_RESET);
 
-	bike.Voltage 		= GetVol()*1000UL/config.VolScale;
+	bike.Voltage 	= GetVol()*1000UL/config.VolScale;
 	//bike.Temperature= GetTemp()	*1000UL/config.TempScale;
 	bike.Temperature= GetTemp();
 	bike.BatStatus 	= GetBatStatus(bike.Voltage);
 
-//	if ( ++count >= 100 ) count = 0;
-//	bike.Voltage 			= count/10 + count/10*10UL + count/10*100UL + count/10*1000UL;
-//	bike.Temperature 	= count/10 + count/10*10UL + count/10*100UL;
-//	bike.Speed			 	= count/10 + count/10*10UL;
-//	bike.Mile			 	  = count/10 + count/10*10UL + count/10*100UL + count/10*1000UL + count/10*10000UL;
+	#if 0
+	if ( ++count >= 100 ) count = 0;
+	bike.Voltage 	= count/10 + count/10*10UL + count/10*100UL + count/10*1000UL;
+	bike.Temperature= count/10 + count/10*10UL + count/10*100UL;
+	bike.Speed		= count/10 + count/10*10UL;
+	bike.Mile		= count/10 + count/10*10UL + count/10*100UL + count/10*1000UL + count/10*10000UL;
 
-//	bike.Hour			 	= count/10 + count/10*10UL;
-//	bike.Minute			= count/10 + count/10*10UL;
-//	bike.SpeedMode  = ((count/10)%4)+1;
-//	bike.BatStatus	= ((count/10)%9);
-
+	bike.Hour		= count/10 + count/10*10UL;
+	bike.Minute		= count/10 + count/10*10UL;
+	bike.SpeedMode  = ((count/10)%4)+1;
+	bike.BatStatus	= ((count/10)%9);
+	#endif
+	
 	//bike.Temperature = 250;
 
 	
@@ -585,11 +589,11 @@ void TimeTask(void)
 			switch ( bike.time_pos ){
 			case 0:	bike.Hour += 10; if ( (bike.Hour % 10) > 3 ) bike.Hour %= 20; else bike.Hour %= 30;	break;
 			case 1:	if ( bike.Hour >= 20 ) {
-								if ( (bike.Hour % 10) < 3 ) bike.Hour ++; else bike.Hour -= 3; 
-							} else {
-								if ( (bike.Hour % 10) < 9 ) bike.Hour ++; else bike.Hour -= 9;
-							}
-							break;
+						if ( (bike.Hour % 10) < 3 ) bike.Hour ++; else bike.Hour -= 3; 
+						} else {
+							if ( (bike.Hour % 10) < 9 ) bike.Hour ++; else bike.Hour -= 9;
+						}
+						break;
 			case 2:	bike.Minute += 10; bike.Minute %= 60;	break;
 			case 3:	if ( bike.Minute % 10 < 9 ) bike.Minute ++; else bike.Minute -= 9;break;
 			default:bike.time_set = 0; break;
@@ -600,19 +604,18 @@ void TimeTask(void)
 		} else if ( key == 0 && pre_key == KEY_NEXT ) {
 			pre_tick = HAL_GetTick();
 			switch ( bike.time_pos ){
-			case 0:	if ( bike.Hour	>= 10 ) 
-								bike.Hour		-= 10; 	
-							else { 
-								if ( (bike.Hour % 10 ) > 3 ) bike.Hour += 10; else bike.Hour += 20; 
-							}
+			case 0:	if ( bike.Hour	>= 10 )	bike.Hour		-= 10; 	
+					else { 
+						if ( (bike.Hour % 10 ) > 3 ) bike.Hour += 10; else bike.Hour += 20; 
+					}
 			break;
 			case 1:	if ( bike.Hour % 10 )	bike.Hour --;			
-							else {
-								if ( bike.Hour >= 20 ) bike.Hour = bike.Hour/10*10 + 3; else bike.Hour = bike.Hour/10*10+9; 
-							}
-							break;
+					else {
+						if ( bike.Hour >= 20 ) bike.Hour = bike.Hour/10*10 + 3; else bike.Hour = bike.Hour/10*10+9; 
+					}
+					break;
 			case 2: if ( bike.Minute>= 10 ) bike.Minute	-= 10;	else bike.Minute+= 50; break;
-			case 3:	if ( bike.Minute%  10 ) bike.Minute --; 		else bike.Minute = bike.Minute/10*10 + 9; break;
+			case 3:	if ( bike.Minute%  10 ) bike.Minute --; 	else bike.Minute = bike.Minute/10*10 + 9; break;
 			default:bike.time_set = 0; break;
 			}
 			RtcTime.RTC_Hours 	= bike.Hour;
@@ -692,8 +695,8 @@ void Calibration(void)
 	}
 
 	bike.Voltage 		= GetVol();
-	//bike.Temperature= GetTemp();
-	//bike.Speed			= GetSpeed();
+	//bike.Temperature	= GetTemp();
+	//bike.Speed		= GetSpeed();
 
 	config.VolScale	= (unsigned long)bike.Voltage*1000UL/VOL_CALIBRATIOIN;					//60.00V
 	//config.TempScale= (long)bike.Temperature*1000UL/TEMP_CALIBRATIOIN;	//25.0C
@@ -706,29 +709,31 @@ void MediaTask(void)
 {
 	static uint32_t pre_key=0;
 	static uint32_t index =0;
-	static uint8_t st_buf[16];
 	static uint8_t  value=0;
+	static uint16_t FM_count=0;
 	
 	uint32_t key;
 	uint8_t cmd_buf[16];
 	uint8_t dat;
 	
-	key = GetKey(KEY_NEXT|KEY_PRE|KEY_VOLUP|KEY_VOLDOWN|KEY_PLAY);
+	key = GetKey(KEY_NEXT|KEY_PRE|KEY_VOLUP|KEY_VOLDOWN|KEY_PLAY|KEY_FM);
 	
 	bike.BT		= 1;
-	bike.MP3	= 1;
-	bike.FM		= 1;
+
+	cmd_buf[0] = 0xAA;cmd_buf[1] = 0x00;cmd_buf[2] = 0x00;cmd_buf[3] = 0x00;cmd_buf[4] = 0xEF;
 	
 	if ( key == 0 ) {
-		cmd_buf[0] = 0xAA;
-		cmd_buf[1] = 0x40;
-		cmd_buf[2] = 0x00;
-		cmd_buf[3] = 0x01;
-		cmd_buf[4] = 0xEF;
 		if ( pre_key == KEY_PLAY ){
-			if ( HAL_UART_Transmit(&huart1, cmd_buf, 5, 5000)!= HAL_OK)	Error_Handler();
-			HAL_Delay(100);
 			if ( (bike.Play == 0 && bike.Pause == 0) || bike.Pause ) {
+				if ( bike.USB == 1 ){
+					cmd_buf[0] = 0xAA;cmd_buf[1] = 0x40;cmd_buf[2] = 0x00;cmd_buf[3] = 0x01;cmd_buf[4] = 0xEF;
+					if ( HAL_UART_Transmit(&huart1, cmd_buf, 5, 5000)!= HAL_OK)	Error_Handler();
+					HAL_Delay(100);
+				} else if ( bike.FM == 1 ){
+					cmd_buf[0] = 0xAA;cmd_buf[1] = 0x40;cmd_buf[2] = 0x00;cmd_buf[3] = 0x02;cmd_buf[4] = 0xEF;
+					if ( HAL_UART_Transmit(&huart1, cmd_buf, 5, 5000)!= HAL_OK)	Error_Handler();
+					HAL_Delay(100);
+				}
 				bike.Play = 1;bike.Pause = 0;cmd_buf[1] = 0x01;cmd_buf[3] = 0x00;
 				if ( HAL_UART_Transmit(&huart1, cmd_buf, 5, 5000)!= HAL_OK)	Error_Handler();
 			} else if ( bike.Play ) {
@@ -751,19 +756,79 @@ void MediaTask(void)
 			cmd_buf[1] = 0x30;
 			cmd_buf[3] = value;
 			if ( HAL_UART_Transmit(&huart1, cmd_buf, 5, 5000)!= HAL_OK)	Error_Handler();
+		} else if ( pre_key == KEY_FM ){
+			if ( bike.FM ){ 
+				bike.FM = 0; bike.USB = 1;
+				cmd_buf[0] = 0xAA;cmd_buf[1] = 0x40;cmd_buf[2] = 0x00;cmd_buf[3] = 0x01;cmd_buf[4] = 0xEF;
+				if ( HAL_UART_Transmit(&huart1, cmd_buf, 5, 5000)!= HAL_OK)	Error_Handler();
+			} else {
+				bike.FM = 1; bike.USB = 0;
+				cmd_buf[0] = 0xAA;cmd_buf[1] = 0x40;cmd_buf[2] = 0x00;cmd_buf[3] = 0x02;cmd_buf[4] = 0xEF;
+				if ( HAL_UART_Transmit(&huart1, cmd_buf, 5, 5000)!= HAL_OK)	Error_Handler();				
+			}
 		}
-	}	
-	
-  if ( HAL_UART_Receive(&huart1, st_buf, 12, 10) == HAL_OK ){
-    st_buf[index++] = dat;
-    if ( index >= sizeof(st_buf) ) index = 0;
-		if ( index >= 1 && st_buf[index-1] == 0xEF ){
-			index = 0;
-    }
-  }
-	
-	
+		FM_count = 0;
+	}	else if ( key == KEY_FM && bike.FM == 1 ){
+		if ( FM_count++ == 30 ){	//3s
+			cmd_buf[0] = 0xAA;cmd_buf[1] = 0x05;cmd_buf[2] = 0x00;cmd_buf[3] = 0x01;cmd_buf[4] = 0xEF;
+			if ( HAL_UART_Transmit(&huart1, cmd_buf, 5, 5000)!= HAL_OK)	Error_Handler();
+		} else if ( FM_count > 30 ){
+			FM_count = 31;
+		}
+	}
 	pre_key = key;
+}
+
+void MediaStatusTask(void)
+{	
+	uint8_t cmd_buf[16];
+	static uint16_t fm_freq_index=0;
+
+  if ( uart1_index >= 6 ){
+		if ( uart1_buf[0] == 0xAB && uart1_buf[4] == 0xEF ) {
+			switch(uart1_buf[1]){
+				case 0x00:
+				case 0x01:
+				case 0x02:
+				case 0x03:
+				case 0x04:
+				case 0x05:
+					bike.Number = ((uint16_t)uart1_buf[2]<<8) | uart1_buf[3];
+					if ( bike.FM == 1 ){
+						if ( bike.Number == 0 ){
+							fm_freq_index = 0;
+						} else if ( bike.Number == 0xFFFF && fm_freq_index == sizeof(config.FM_Freq)/sizeof(config.FM_Freq[0])) {
+							cmd_buf[0] = 0xAA;cmd_buf[1] = 0x01;cmd_buf[2] = config.FM_Freq[0]>>8;cmd_buf[3] = config.FM_Freq[0];cmd_buf[4] = 0xEF;
+							if ( HAL_UART_Transmit(&huart1, cmd_buf, 5, 5000)!= HAL_OK)	Error_Handler();
+						} else {
+							config.FM_Freq[fm_freq_index++] = bike.Number;
+						}
+					}	else {
+//						if ( bike.Number == 0 ){
+//							bike.FM = 1; bike.USB = 0;
+//							cmd_buf[0] = 0xAA;cmd_buf[1] = 0x40;cmd_buf[2] = 0x00;cmd_buf[3] = 0x02;cmd_buf[4] = 0xEF;
+//							if ( HAL_UART_Transmit(&huart1, cmd_buf, 5, 5000)!= HAL_OK)	Error_Handler();
+//						}
+					}						
+					break;
+				case 0x30:break;
+				case 0x40:
+					if 			( uart1_buf[2] == 0x00 && uart1_buf[3] == 0x01 ){ 
+						bike.USB = 1; bike.FM = 0;
+						//cmd_buf[0] = 0xAA;cmd_buf[1] = 0x40;cmd_buf[2] = 0x00;cmd_buf[3] = 0x01;cmd_buf[4] = 0xEF;
+						//if ( HAL_UART_Transmit(&huart1, cmd_buf, 5, 5000)!= HAL_OK)	Error_Handler();
+					}
+					else if ( uart1_buf[2] == 0x01 && uart1_buf[3] == 0x01 ){ 
+						bike.USB = 0; bike.FM = 1;
+						//cmd_buf[0] = 0xAA;cmd_buf[1] = 0x40;cmd_buf[2] = 0x00;cmd_buf[3] = 0x02;cmd_buf[4] = 0xEF;
+						//if ( HAL_UART_Transmit(&huart1, cmd_buf, 5, 5000)!= HAL_OK)	Error_Handler();
+					}
+					break;
+				default: 	break;
+			}
+		}
+		uart1_index = 0;
+  }
 }
 
 
@@ -813,8 +878,9 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
   {
     hall_count++;
 		tick = HAL_GetTick();
-		if ( tick >= pre_tick ) speed = tick - tick_1s;
+		if ( tick >= pre_tick ) speed = tick - pre_tick;
 		else speed = UINT32_MAX - pre_tick + tick;
+		pre_tick = tick;
 
 		if ( speed )
 			bike.Speed = PERIMETER * 60 * 60 / 1000 / speed;	
@@ -828,30 +894,31 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 int main(void)
 {
 
-  /* USER CODE BEGIN 1 */
+	/* USER CODE BEGIN 1 */
 	uint32_t i;
 	uint32_t tick;
-  /* USER CODE END 1 */
+	uint8_t cmd_buf[5];
+	/* USER CODE END 1 */
 
-  /* MCU Configuration----------------------------------------------------------*/
+	/* MCU Configuration----------------------------------------------------------*/
 
-  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-  HAL_Init();
+	/* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+	HAL_Init();
 
-  /* Configure the system clock */
-  SystemClock_Config();
+	/* Configure the system clock */
+	SystemClock_Config();
 
-  /* Initialize all configured peripherals */
-  MX_GPIO_Init();
-  MX_I2C1_Init();
-  //MX_TIM3_Init();
-  MX_USART1_UART_Init();
-  //MX_USART2_UART_Init();
-  MX_ADC_Init();
-  //MX_IWDG_Init();
+	/* Initialize all configured peripherals */
+	MX_GPIO_Init();
+	MX_I2C1_Init();
+	//MX_TIM3_Init();
+	MX_USART1_UART_Init();
+	//MX_USART2_UART_Init();
+	MX_ADC_Init();
+	//MX_IWDG_Init();
 	EXTI4_15_IRQHandler_Config();
 
-  /* USER CODE BEGIN 2 */
+	/* USER CODE BEGIN 2 */
 	InitConfig();
 	BL55077_Config(1);
 	for(i=0;i<64;i++){
@@ -861,7 +928,7 @@ int main(void)
 		//IWDG_Feed();  
 	}
 	//Calibration();
-	
+
 	//bike.HasTimer = !PCF8563_Check();
 	//PCF8563_Check();
 	bike.HasTimer = PCF8563_GetTime(PCF_Format_BIN,&RtcTime);
@@ -870,51 +937,55 @@ int main(void)
 	// bike.Minute = 1;
 
 	//YXT_Init();  
-	
+
 	while ( HAL_GetTick() < PON_ALLON_TIME ) ;//IWDG_Feed();
 	BL55077_Config(0);
 	//while ( HAL_GetTick() < PON_ALLON_TIME*2 ) ;//IWDG_Feed();
 
-  /* USER CODE END 2 */
+	cmd_buf[0] = 0xAA;cmd_buf[1] = 0x30;cmd_buf[2] = 0x00;cmd_buf[3] = 0x01;cmd_buf[4] = 0xEF;
+	if ( HAL_UART_Transmit(&huart1, cmd_buf, 5, 5000)!= HAL_OK)	Error_Handler();
+	bike.USB = 1;
+	/* USER CODE END 2 */
 
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
-  while (1)
-  {
-  /* USER CODE END WHILE */
+	/* Infinite loop */
+	/* USER CODE BEGIN WHILE */
+	while (1)
+	{
+		/* USER CODE END WHILE */
 
-  /* USER CODE BEGIN 3 */
+		/* USER CODE BEGIN 3 */
 		tick = HAL_GetTick();
 
 		if ( (tick >= tick_10ms && (tick - tick_10ms) > 10 ) || \
-				 (tick <  tick_10ms && (0xFFFF - tick_10ms + tick) > 10 ) ) {
+			 (tick <  tick_10ms && (0xFFFF - tick_10ms + tick) > 10 ) ) {
 			tick_10ms = tick;
 			KeyTask();
 		}
-		
+
 		if ( (tick >= tick_100ms && (tick - tick_100ms) > 100 ) || \
-				 (tick <  tick_100ms && (0xFFFF - tick_100ms + tick) > 100 ) ) {
+			 (tick <  tick_100ms && (0xFFFF - tick_100ms + tick) > 100 ) ) {
 			tick_100ms = tick;
 
 			BikeTask();    
 			//YXT_Task(&bike);  
 			TimeTask();   
 			MediaTask();
+			MediaStatusTask();
 			MenuUpdate(&bike);
-			
+
 			/* Reload IWDG counter */
 			//IWDG_Feed();
 		}
-				 
+
 		if ( (tick >= tick_1s && (tick - tick_1s) > 1000 ) || \
-				 (tick <  tick_1s && (0xFFFF - tick_1s + tick) > 1000 ) ) {
+		(tick <  tick_1s && (0xFFFF - tick_1s + tick) > 1000 ) ) {
 			tick_1s = tick;
-			SpeedTask();
+			//SpeedTask();
 		}
-		
-    //UartTask();
-  }
-  /* USER CODE END 3 */
+
+		//UartTask();
+	}
+	/* USER CODE END 3 */
 
 }
 
@@ -1154,11 +1225,49 @@ static void MX_USART1_UART_Init(void)
   huart1.Init.OverSampling = UART_OVERSAMPLING_16;
   huart1.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
   huart1.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+  if(HAL_UART_DeInit(&huart1) != HAL_OK)
+  {
+    Error_Handler();
+  }
   if (HAL_UART_Init(&huart1) != HAL_OK)
   {
     Error_Handler();
   }
 
+  if(HAL_UART_Receive_IT(&huart1, (uint8_t *)uart1_rx, sizeof(uart1_rx)) != HAL_OK)
+  {
+    Error_Handler();
+  }
+	
+}
+
+/**
+  * @brief  Rx Transfer completed callback
+  * @param  UartHandle: UART handle
+  * @note   This example shows a simple way to report end of DMA Rx transfer, and 
+  *         you can add your own implementation.
+  * @retval None
+  */
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *UartHandle)
+{
+  /* Set transmission flag: trasfer complete*/
+	if ( UartHandle == &huart1 ){
+		if( uart1_index >= sizeof(uart1_buf) ) uart1_index = 0;
+		uart1_buf[uart1_index++] = *(UartHandle->pRxBuffPtr-1);
+		if(HAL_UART_Receive_IT(UartHandle, (uint8_t *)uart1_rx, sizeof(uart1_rx)) != HAL_OK) Error_Handler();
+	}
+}
+
+/**
+  * @brief  UART error callbacks
+  * @param  UartHandle: UART handle
+  * @note   This example shows a simple way to report transfer error, and you can
+  *         add your own implementation.
+  * @retval None
+  */
+ void HAL_UART_ErrorCallback(UART_HandleTypeDef *UartHandle)
+{
+		if(HAL_UART_Receive_IT(UartHandle, (uint8_t *)uart1_rx, sizeof(uart1_rx)) != HAL_OK) Error_Handler();
 }
 
 /* USART2 init function */

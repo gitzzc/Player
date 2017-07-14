@@ -52,7 +52,7 @@ void MenuUpdate(BIKE_STATUS* bike)
 
 	if( bike->PhaseERR  ) BL_Data[12]	|= 0x80;	//S9 	电机缺相故障
 	if( bike->Charge	  ) BL_Data[18]	|= 0x08;	//S10
-	if( bike->MP3			  ) BL_Data[16]	|= 0x08;	//S14
+	if( bike->USB			  ) BL_Data[16]	|= 0x08;	//S14
 	if( bike->BT				) BL_Data[16]	|= 0x02;	//S15
 	if( bike->FM				) BL_Data[16]	|= 0x04;	//S16
 	if( bike->Play			) BL_Data[15]	|= 0x80;	//S19
