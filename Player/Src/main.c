@@ -72,10 +72,7 @@ uint32_t vol_buf[32];
 int32_t temp_buf[10];
 uint8_t uart_buf[8];
 const uint16_t* BatStatus;
-uint8_t uart1_rx[1];
-uint8_t uart1_buf[32];
-uint8_t uart1_index = 0;
-
+uint8_t uart1_rx[32];
 
 BIKE_STATUS bike;
 BIKE_CONFIG config;
@@ -770,9 +767,11 @@ void MediaTask(void)
 		FM_count = 0;
 	}	else if ( key == KEY_FM && bike.FM == 1 ){
 		if ( FM_count++ == 30 ){	//3s
+			key = 0;
 			cmd_buf[0] = 0xAA;cmd_buf[1] = 0x05;cmd_buf[2] = 0x00;cmd_buf[3] = 0x01;cmd_buf[4] = 0xEF;
 			if ( HAL_UART_Transmit(&huart1, cmd_buf, 5, 5000)!= HAL_OK)	Error_Handler();
 		} else if ( FM_count > 30 ){
+			key = 0;
 			FM_count = 31;
 		}
 	}
@@ -781,55 +780,74 @@ void MediaTask(void)
 
 void MediaStatusTask(void)
 {	
+	uint8_t* stbuf;
 	uint8_t cmd_buf[16];
-	static uint16_t fm_freq_index=0;
+	uint8_t len,i;
+	static uint16_t fm_freq_index=0,fm_search=0;
+	static uint8_t head=0;
 
-  if ( uart1_index >= 6 ){
-		if ( uart1_buf[0] == 0xAB && uart1_buf[4] == 0xEF ) {
-			switch(uart1_buf[1]){
-				case 0x00:
-				case 0x01:
-				case 0x02:
-				case 0x03:
-				case 0x04:
-				case 0x05:
-					bike.Number = ((uint16_t)uart1_buf[2]<<8) | uart1_buf[3];
-					if ( bike.FM == 1 ){
-						if ( bike.Number == 0 ){
-							fm_freq_index = 0;
-						} else if ( bike.Number == 0xFFFF && fm_freq_index == sizeof(config.FM_Freq)/sizeof(config.FM_Freq[0])) {
-							cmd_buf[0] = 0xAA;cmd_buf[1] = 0x01;cmd_buf[2] = config.FM_Freq[0]>>8;cmd_buf[3] = config.FM_Freq[0];cmd_buf[4] = 0xEF;
-							if ( HAL_UART_Transmit(&huart1, cmd_buf, 5, 5000)!= HAL_OK)	Error_Handler();
-						} else {
-							config.FM_Freq[fm_freq_index++] = bike.Number;
+	len = huart1.RxXferSize - huart1.RxXferCount;
+	if ( len == 0 )
+		return ;
+	
+	if ( head == len ){
+    huart1.RxState = HAL_UART_STATE_READY;
+		head = 0;
+		if(HAL_UART_Receive_IT(&huart1, (uint8_t *)uart1_rx, sizeof(uart1_rx)) != HAL_OK) 
+			Error_Handler();
+	} else {
+		while( len - head >= 5 ){
+			if ( uart1_rx[head] == 0xAB && uart1_rx[head+4] == 0xEF ){
+				stbuf = uart1_rx+head;
+				head += 5;
+				switch(stbuf[1]){
+					case 0x00:
+					case 0x01:
+					case 0x02:
+					case 0x03:
+					case 0x04:
+					case 0x05:
+						bike.Number = ((uint16_t)stbuf[2]<<8) | stbuf[3];
+						if ( bike.FM == 1 ){
+							if ( bike.Number == 0 ){
+								fm_freq_index = 0;
+							} else if ( bike.Number == 0xFFFF && fm_freq_index == sizeof(config.FM_Freq)/sizeof(config.FM_Freq[0])) {
+								cmd_buf[0] = 0xAA;cmd_buf[1] = 0x01;cmd_buf[2] = config.FM_Freq[0]>>8;cmd_buf[3] = config.FM_Freq[0];cmd_buf[4] = 0xEF;
+								if ( HAL_UART_Transmit(&huart1, cmd_buf, 5, 5000)!= HAL_OK )	
+									Error_Handler();
+							} else {
+								config.FM_Freq[fm_freq_index++] = bike.Number;
+							}
+						}	else {
+								if ( bike.Number == 0 ){
+									bike.FM = 1; bike.USB = 0;
+									cmd_buf[0] = 0xAA;cmd_buf[1] = 0x40;cmd_buf[2] = 0x00;cmd_buf[3] = 0x02;cmd_buf[4] = 0xEF;
+									if ( HAL_UART_Transmit(&huart1, cmd_buf, 5, 5000)!= HAL_OK)	Error_Handler();
+								}
+						}						
+						break;
+					case 0x30:break;
+					case 0x40:
+						if 			( stbuf[2] == 0x00 && stbuf[3] == 0x01 ){ 
+							bike.USB = 1; bike.FM = 0;
+							//cmd_buf[0] = 0xAA;cmd_buf[1] = 0x40;cmd_buf[2] = 0x00;cmd_buf[3] = 0x01;cmd_buf[4] = 0xEF;
+							//if ( HAL_UART_Transmit(&huart1, cmd_buf, 5, 5000)!= HAL_OK)	Error_Handler();
 						}
-					}	else {
-//						if ( bike.Number == 0 ){
-//							bike.FM = 1; bike.USB = 0;
-//							cmd_buf[0] = 0xAA;cmd_buf[1] = 0x40;cmd_buf[2] = 0x00;cmd_buf[3] = 0x02;cmd_buf[4] = 0xEF;
-//							if ( HAL_UART_Transmit(&huart1, cmd_buf, 5, 5000)!= HAL_OK)	Error_Handler();
-//						}
-					}						
-					break;
-				case 0x30:break;
-				case 0x40:
-					if 			( uart1_buf[2] == 0x00 && uart1_buf[3] == 0x01 ){ 
-						bike.USB = 1; bike.FM = 0;
-						//cmd_buf[0] = 0xAA;cmd_buf[1] = 0x40;cmd_buf[2] = 0x00;cmd_buf[3] = 0x01;cmd_buf[4] = 0xEF;
-						//if ( HAL_UART_Transmit(&huart1, cmd_buf, 5, 5000)!= HAL_OK)	Error_Handler();
-					}
-					else if ( uart1_buf[2] == 0x01 && uart1_buf[3] == 0x01 ){ 
-						bike.USB = 0; bike.FM = 1;
-						//cmd_buf[0] = 0xAA;cmd_buf[1] = 0x40;cmd_buf[2] = 0x00;cmd_buf[3] = 0x02;cmd_buf[4] = 0xEF;
-						//if ( HAL_UART_Transmit(&huart1, cmd_buf, 5, 5000)!= HAL_OK)	Error_Handler();
-					}
-					break;
-				default: 	break;
+						else if ( stbuf[2] == 0x01 && stbuf[3] == 0x01 ){ 
+							bike.USB = 0; bike.FM = 1;
+							//cmd_buf[0] = 0xAA;cmd_buf[1] = 0x40;cmd_buf[2] = 0x00;cmd_buf[3] = 0x02;cmd_buf[4] = 0xEF;
+							//if ( HAL_UART_Transmit(&huart1, cmd_buf, 5, 5000)!= HAL_OK)	Error_Handler();
+						}
+						break;
+					default: 	break;
+				}
+			}	else {
+				head++;
+				continue;
 			}
 		}
-		uart1_index = 0;
-  }
-}
+	}
+ }
 
 
 /**
@@ -1252,9 +1270,8 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *UartHandle)
 {
   /* Set transmission flag: trasfer complete*/
 	if ( UartHandle == &huart1 ){
-		if( uart1_index >= sizeof(uart1_buf) ) uart1_index = 0;
-		uart1_buf[uart1_index++] = *(UartHandle->pRxBuffPtr-1);
-		if(HAL_UART_Receive_IT(UartHandle, (uint8_t *)uart1_rx, sizeof(uart1_rx)) != HAL_OK) Error_Handler();
+		if(HAL_UART_Receive_IT(UartHandle, (uint8_t *)uart1_rx, sizeof(uart1_rx)) != HAL_OK) 
+			Error_Handler();
 	}
 }
 

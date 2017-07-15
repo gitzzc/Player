@@ -13,6 +13,8 @@ const unsigned char SegDataVoltage[10]= {0x3F,0x06,0x5B,0x4F,0x66,0x6D,0x7D,0x0E
 const unsigned char SegDataMile[10]		= {0x3F,0x06,0x5B,0x4F,0x66,0x6D,0x7D,0x0E,0x7F,0x6F};
 const unsigned char SegDataSpeed[10] 	= {0xCF,0x06,0xAD,0x2F,0x66,0x6B,0xEB,0x07,0xEF,0x6F};
 const unsigned char SegDataTemp[10] 	= {0x3F,0x06,0x6D,0x4F,0x56,0x5B,0x7B,0x07,0x7F,0x5F};
+const unsigned char SegDataNumber[10]			= {0x3F,0x06,0x5B,0x4F,0x66,0x6D,0x7D,0x0E,0x7F,0x6F};
+
 
 void MenuUpdate(BIKE_STATUS* bike)
 {
@@ -139,6 +141,16 @@ void MenuUpdate(BIKE_STATUS* bike)
 		case 4: BL_Data[ 4] |= 0x10;break;
     default:BL_Data[ 4] &=~0xF0;break;
   }
+	
+  BL_Data[13] |= (SegDataNumber[(bike->Number			)%10]) & 0x0F;
+  BL_Data[14] |= (SegDataNumber[(bike->Number			)%10]) & 0xF0;
+  BL_Data[14] |= (SegDataNumber[(bike->Number/10	)%10]) & 0x0F;
+  BL_Data[15] |= (SegDataNumber[(bike->Number/10	)%10]) & 0xF0;
+  BL_Data[15] |= (SegDataNumber[(bike->Number/100	)%10]) & 0x0F;
+  BL_Data[16] |= (SegDataNumber[(bike->Number/100	)%10]) & 0xF0;
+	if ( bike->Number >= 1000  ) BL_Data[16] |= 0x01;	//S17
+	if ( bike->FM ) BL_Data[14] |= 0x80;	//S18
+
   
   BL_Write_Data(0,sizeof(BL_Data),BL_Data);
 }
