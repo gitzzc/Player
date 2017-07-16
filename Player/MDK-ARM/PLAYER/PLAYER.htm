@@ -3,7 +3,7 @@
 <title>Static Call Graph - [PLAYER\PLAYER.axf]</title></head>
 <body><HR>
 <H1>Static Call Graph for image PLAYER\PLAYER.axf</H1><HR>
-<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5050169: Last Updated: Sun Jul 16 01:05:50 2017
+<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5050169: Last Updated: Sun Jul 16 23:16:49 2017
 <BR><P>
 <H3>Maximum Stack Usage =        196 bytes + Unknown(Cycles, Untraceable Function Pointers)</H3><H3>
 Call chain for Maximum Stack Depth:</H3>
@@ -851,7 +851,7 @@ Global Symbols
 <P><STRONG><a name="[2]"></a>HardFault_Handler</STRONG> (Thumb, 4 bytes, Stack size 0 bytes, stm32f0xx_it.o(i.HardFault_Handler))
 <BR>[Address Reference Count : 1]<UL><LI> startup_stm32f030x8.o(RESET)
 </UL>
-<P><STRONG><a name="[88]"></a>InitConfig</STRONG> (Thumb, 150 bytes, Stack size 16 bytes, main.o(i.InitConfig))
+<P><STRONG><a name="[88]"></a>InitConfig</STRONG> (Thumb, 200 bytes, Stack size 16 bytes, main.o(i.InitConfig))
 <BR><BR>[Stack]<UL><LI>Max Depth = 16<LI>Call Chain = InitConfig
 </UL>
 <BR>[Calls]<UL><LI><a href="#[28]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_memset
@@ -868,7 +868,7 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[1f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
-<P><STRONG><a name="[91]"></a>MediaStatusTask</STRONG> (Thumb, 510 bytes, Stack size 32 bytes, main.o(i.MediaStatusTask))
+<P><STRONG><a name="[91]"></a>MediaStatusTask</STRONG> (Thumb, 460 bytes, Stack size 32 bytes, main.o(i.MediaStatusTask))
 <BR><BR>[Stack]<UL><LI>Max Depth = 104<LI>Call Chain = MediaStatusTask &rArr; HAL_UART_Transmit &rArr; UART_WaitOnFlagUntilTimeout
 </UL>
 <BR>[Calls]<UL><LI><a href="#[84]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_UART_Transmit
@@ -878,7 +878,7 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[1f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
-<P><STRONG><a name="[92]"></a>MediaTask</STRONG> (Thumb, 818 bytes, Stack size 24 bytes, main.o(i.MediaTask))
+<P><STRONG><a name="[92]"></a>MediaTask</STRONG> (Thumb, 748 bytes, Stack size 24 bytes, main.o(i.MediaTask))
 <BR><BR>[Stack]<UL><LI>Max Depth = 96<LI>Call Chain = MediaTask &rArr; HAL_UART_Transmit &rArr; UART_WaitOnFlagUntilTimeout
 </UL>
 <BR>[Calls]<UL><LI><a href="#[4f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_Delay
@@ -889,7 +889,7 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[1f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
-<P><STRONG><a name="[93]"></a>MenuUpdate</STRONG> (Thumb, 1972 bytes, Stack size 40 bytes, display_8807gct.o(i.MenuUpdate))
+<P><STRONG><a name="[93]"></a>MenuUpdate</STRONG> (Thumb, 1974 bytes, Stack size 40 bytes, display_8807gct.o(i.MenuUpdate))
 <BR><BR>[Stack]<UL><LI>Max Depth = 136<LI>Call Chain = MenuUpdate &rArr; BL_Write_Data &rArr; HAL_I2C_Master_Transmit &rArr; I2C_WaitOnTXISFlagUntilTimeout &rArr; I2C_IsAcknowledgeFailed
 </UL>
 <BR>[Calls]<UL><LI><a href="#[94]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__ARM_common_switch8
@@ -1072,7 +1072,7 @@ Global Symbols
 
 <P><STRONG><a name="[b0]"></a>__scatterload_zeroinit</STRONG> (Thumb, 14 bytes, Stack size unknown bytes, handlers.o(i.__scatterload_zeroinit), UNUSED)
 
-<P><STRONG><a name="[1f]"></a>main</STRONG> (Thumb, 346 bytes, Stack size 16 bytes, main.o(i.main))
+<P><STRONG><a name="[1f]"></a>main</STRONG> (Thumb, 330 bytes, Stack size 16 bytes, main.o(i.main))
 <BR><BR>[Stack]<UL><LI>Max Depth = 196<LI>Call Chain = main &rArr; SystemClock_Config &rArr; HAL_RCC_ClockConfig &rArr; HAL_RCC_GetSysClockFreq &rArr; __aeabi_uidivmod
 </UL>
 <BR>[Calls]<UL><LI><a href="#[5f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_Init

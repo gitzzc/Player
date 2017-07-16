@@ -29,27 +29,27 @@
 
 /******************************************************************************/
 typedef struct {
-	uint32_t NearLight:1;
+	uint32_t NearLight	:1;
 	uint32_t CRZLight	:1;
 	uint32_t TurnLeft	:1;
-	uint32_t TurnRight:1;
+	uint32_t TurnRight	:1;
 	uint32_t LRFlash	:1;
 	uint32_t Cruise		:1;
 	uint32_t ECUERR		:1;
 	uint32_t Braked		:1;
-	uint32_t Beep			:1;
+	uint32_t Beep		:1;
 	uint32_t PhaseERR	:1;
 	uint32_t HallERR	:1;
 	uint32_t WheelERR	:1;
 	uint32_t YXTERR		:1;
-	uint32_t ECO			:1;
-	uint32_t R				:1;
+	uint32_t ECO		:1;
+	uint32_t R			:1;
 	uint32_t Charge		:1;
-	uint32_t USB			:1;
-	uint32_t BT				:1;
-	uint32_t FM				:1;
-	uint32_t Play			:1;
-	uint32_t Pause		:1;
+	uint32_t USB		:1;
+	uint32_t BT			:1;
+	uint32_t FMSearch	:1;
+	uint32_t Codec		:1;
+	uint32_t Play		:1;
 	uint32_t HasTimer	:1;
 	uint32_t time_set	:1;
 	
@@ -60,6 +60,8 @@ typedef struct {
 	uint32_t Speed;
 	uint32_t Mile;
 	uint32_t Number;
+	uint32_t Media;
+	uint32_t PlayMedia;
 	
 	uint32_t Hour;
 	uint32_t Minute;
@@ -75,6 +77,7 @@ typedef struct {
 	uint32_t TempScale	;
 	uint32_t SpeedScale;
 	uint32_t Mile;
+	uint32_t PlayMedia;
 	uint32_t FM_Freq[32];
 	uint32_t Sum;
 } BIKE_CONFIG,*pBIKE_CONFIG;
@@ -174,7 +177,10 @@ unsigned int Get_ElapseTick(unsigned int pre_tick);
 
 #define KEY_ALL		(0xFFFFFFFF)
 
-
+#define PM_FM		(1<<0)
+#define PM_USB		(1<<1)
+#define PM_FLASH	(1<<2)
+#define PM_BT		(1<<3)
 
 /******************************************************************************/
 
