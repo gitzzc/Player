@@ -51,8 +51,9 @@ void MenuUpdate(BIKE_STATUS* bike)
 	//if( bike->HallERR	) BL_Data[5] 	|= 0x08;	//S		电机霍尔故障
 	//if( bike->WheelERR) BL_Data[5] 	|= 0x04;	//S		手把故障
 	//if( bike->ECUERR 	) BL_Data[15]	|= 0x20;	//S 	电机控制器故障
-
-	if( bike->PhaseERR  ) BL_Data[12]	|= 0x80;	//S9 	电机缺相故障
+	//if( bike->PhaseERR  ) BL_Data[12]	|= 0x80;	//S 	电机缺相故障
+	if( bike->Braked	) BL_Data[12]	|= 0x80;	//S9 
+	
 	if( bike->Charge	) BL_Data[18]	|= 0x08;	//S10
 	if		( bike->PlayMedia == PM_FM 	) BL_Data[16] |= 0x04;	//S16
 	else if ( bike->PlayMedia == PM_USB ) BL_Data[16] |= 0x08;	//S14

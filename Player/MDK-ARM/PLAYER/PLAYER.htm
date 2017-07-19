@@ -3,7 +3,7 @@
 <title>Static Call Graph - [PLAYER\PLAYER.axf]</title></head>
 <body><HR>
 <H1>Static Call Graph for image PLAYER\PLAYER.axf</H1><HR>
-<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5050169: Last Updated: Sun Jul 16 23:16:49 2017
+<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5050169: Last Updated: Wed Jul 19 22:46:25 2017
 <BR><P>
 <H3>Maximum Stack Usage =        196 bytes + Unknown(Cycles, Untraceable Function Pointers)</H3><H3>
 Call chain for Maximum Stack Depth:</H3>
@@ -868,7 +868,7 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[1f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
-<P><STRONG><a name="[91]"></a>MediaStatusTask</STRONG> (Thumb, 460 bytes, Stack size 32 bytes, main.o(i.MediaStatusTask))
+<P><STRONG><a name="[91]"></a>MediaStatusTask</STRONG> (Thumb, 432 bytes, Stack size 32 bytes, main.o(i.MediaStatusTask))
 <BR><BR>[Stack]<UL><LI>Max Depth = 104<LI>Call Chain = MediaStatusTask &rArr; HAL_UART_Transmit &rArr; UART_WaitOnFlagUntilTimeout
 </UL>
 <BR>[Calls]<UL><LI><a href="#[84]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_UART_Transmit
@@ -983,7 +983,7 @@ Global Symbols
 </UL>
 <BR>[Address Reference Count : 1]<UL><LI> startup_stm32f030x8.o(RESET)
 </UL>
-<P><STRONG><a name="[9c]"></a>TimeTask</STRONG> (Thumb, 906 bytes, Stack size 8 bytes, main.o(i.TimeTask))
+<P><STRONG><a name="[9c]"></a>TimeTask</STRONG> (Thumb, 968 bytes, Stack size 8 bytes, main.o(i.TimeTask))
 <BR><BR>[Stack]<UL><LI>Max Depth = 160<LI>Call Chain = TimeTask &rArr; PCF8563_GetTime &rArr; HAL_I2C_Mem_Read &rArr; I2C_RequestMemoryRead &rArr; I2C_WaitOnTXISFlagUntilTimeout &rArr; I2C_IsAcknowledgeFailed
 </UL>
 <BR>[Calls]<UL><LI><a href="#[2c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_GetTick

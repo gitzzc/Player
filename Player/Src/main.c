@@ -568,17 +568,17 @@ void TimeTask(void)
 		} else {
 			if ( GetKey(KEY_ALL) || Get_ElapseTick(0) > 3000 ) {
 				time_set_enable = 0;
-		}
+			}
 			pre_tick = HAL_GetTick();
 		}
 	} 
 	if ( bike.time_set ) {		
 		key = GetKey(KEY_ALL);
-		if ( key == 0 && pre_key == KEY_VOLUP ) {
+		if ( key == 0 && pre_key == KEY_PRE) {
 			pre_tick = HAL_GetTick();
 			bike.time_pos ++;
 			bike.time_pos %= 4;
-		} else if ( key == 0 && pre_key == KEY_VOLDOWN ) {
+		} else if ( key == 0 && pre_key == KEY_NEXT ) {
 			pre_tick = HAL_GetTick();
 			if ( bike.time_pos ) 
 				bike.time_pos--;
@@ -586,7 +586,7 @@ void TimeTask(void)
 				bike.time_pos = 3;
 		}
 		
-		if ( key == 0 && pre_key == KEY_PRE ) {
+		if ( key == 0 && pre_key == KEY_VOLUP  ) {
 			pre_tick = HAL_GetTick();
 			switch ( bike.time_pos ){
 			case 0:	bike.Hour += 10; if ( (bike.Hour % 10) > 3 ) bike.Hour %= 20; else bike.Hour %= 30;	break;
@@ -603,10 +603,10 @@ void TimeTask(void)
 			RtcTime.RTC_Hours 	= bike.Hour;
 			RtcTime.RTC_Minutes = bike.Minute;
 			PCF8563_SetTime(PCF_Format_BIN,&RtcTime);
-		} else if ( key == 0 && pre_key == KEY_NEXT ) {
+		} else if ( key == 0 && pre_key == KEY_VOLDOWN ) {
 			pre_tick = HAL_GetTick();
 			switch ( bike.time_pos ){
-			case 0:	if ( bike.Hour	>= 10 )	bike.Hour		-= 10; 	
+			case 0:	if ( bike.Hour	>= 10 )	bike.Hour -= 10; 	
 					else { 
 						if ( (bike.Hour % 10 ) > 3 ) bike.Hour += 10; else bike.Hour += 20; 
 					}
@@ -627,9 +627,17 @@ void TimeTask(void)
 		if ( Get_ElapseTick(pre_tick) > 30000 ){
 			bike.time_set = 0;
 		}
-		if ( GetKey(KEY_TURNLEFT | KEY_TURNRIGHT | KEY_LRFLASH | KEY_NEARLIGHT ) )
-
-		bike.time_set = 0;
+		if ( GetKey(KEY_PLAY) ) {
+			if ( Get_ElapseTick(pre_tick) > 6000 ){
+				time_set_enable = 0;
+				bike.time_set = 0; 
+				pre_tick = HAL_GetTick();
+			}		
+		} else {
+			if ( GetKey(KEY_TURNLEFT | KEY_TURNRIGHT | KEY_LRFLASH | KEY_NEARLIGHT | KEY_BEEP | KEY_BRAKE | KEY_FM ) ) 
+				bike.time_set = 0;
+			pre_tick = HAL_GetTick();
+		}
 		
 		pre_key = key;
 	}	else {
@@ -799,7 +807,7 @@ void MediaStatusTask(void)
 	static uint16_t fm_freq_index=0,fm_search=0;
 	static uint8_t head=0;
 
-	bike.BT		= 1;
+	//bike.BT		= 1;
 
 	len = huart1.RxXferSize - huart1.RxXferCount;
 	if ( len == 0 )
@@ -826,9 +834,10 @@ void MediaStatusTask(void)
 						if ( bike.FMSearch ){
 							if ( bike.Number == 0 ){
 								fm_freq_index = 0;
-							} else if ( bike.Number == 0xFFFF && fm_freq_index == sizeof(config.FM_Freq)/sizeof(config.FM_Freq[0])) {
+							} else if ( bike.Number == 0xFFFF || fm_freq_index == sizeof(config.FM_Freq)/sizeof(config.FM_Freq[0])) {
 								bike.FMSearch = 0;
-								cmd_buf[0] = 0xAA;cmd_buf[1] = 0x01;cmd_buf[2] = config.FM_Freq[0]>>8;cmd_buf[3] = config.FM_Freq[0];cmd_buf[4] = 0xEF;
+								//cmd_buf[0] = 0xAA;cmd_buf[1] = 0x01;cmd_buf[2] = config.FM_Freq[0]>>8;cmd_buf[3] = config.FM_Freq[0];cmd_buf[4] = 0xEF;
+								cmd_buf[0] = 0xAA;cmd_buf[1] = 0x01;cmd_buf[2] = 0x00;cmd_buf[3] = 0x01;cmd_buf[4] = 0xEF;
 								if ( HAL_UART_Transmit(&huart1, cmd_buf, 5, 5000)!= HAL_OK )	
 									Error_Handler();
 							} else {
@@ -837,7 +846,7 @@ void MediaStatusTask(void)
 								//config.FM_Freq[fm_freq_index++] = bike.Number;
 							}
 						} else if ( bike.Number == 0 ){
-							bike.Codec = 1;
+ 							bike.Codec = 1;
 						}				
 						break;
 					case 0x30:break;
@@ -983,7 +992,7 @@ int main(void)
 
 		/* USER CODE BEGIN 3 */
 		tick = HAL_GetTick();
-
+ 
 		if ( (tick >= tick_10ms && (tick - tick_10ms) > 10 ) || \
 			 (tick <  tick_10ms && (0xFFFF - tick_10ms + tick) > 10 ) ) {
 			tick_10ms = tick;
