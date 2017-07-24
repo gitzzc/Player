@@ -7,6 +7,9 @@
   * @brief   
    ******************************************************************************
   * @Changlog
+  * V0.11
+  * 增加开机显示累计里程5秒，如果2秒后有速度则跳到显示单次里程
+  *
   * V0.10
   * 20170719 改好时间调整方式、Braked显示；
   *
@@ -80,17 +83,33 @@ unsigned int Get_ElapseTick(unsigned int pre_tick);
 
 /******************************************************************************/
 
-#define VOL_CALIBRATIOIN		240UL		//24.0V
-#define TEMP_CALIBRATIOIN		250UL		//25.0C
-#define SPEED_CALIBRATIOIN	30UL		//30km/h
+#define SINGLE_TRIP
 
-#define PON_ALLON_TIME			1000UL	//1000ms
+//#define SYS_VOLTAGE				24UL
+#define SYS_VOLTAGE				48UL
+
+#if ( SYS_VOLTAGE == 24UL )
+	#define VOL_CALIBRATIOIN	240UL	//24.0V
+	#define PERIMETER			1256UL	//mm
+	//#define PERIMETER			1099UL	//mm
+	#define PULSE_C				1
+	#define BAT_STATUS			BatStatus24
+#elif ( SYS_VOLTAGE == 48UL )
+	#define VOL_CALIBRATIOIN	480UL	//24.0V
+	#define PERIMETER			1256UL	//mm
+	//#define PERIMETER			1099UL	//mm
+	#define PULSE_C				8
+	#define BAT_STATUS			BatStatus48
+#endif
+
+#define TEMP_CALIBRATIOIN		250UL		//25.0C
+#define SPEED_CALIBRATIOIN		30UL		//30km/h
+
+#define PON_ALLON_TIME			1000UL		//1000ms
 
 #define DISPLAY_MAX_SPEED		40UL		//40km/h
-#define SPEEDMODE_DEFAULT		1				//1档
+#define SPEEDMODE_DEFAULT		1UL			//1档
 
-#define PERIMETER						1256		//mm
-//#define PERIMETER						1099		//mm
 /******************************************************************************/
 
 //define PCB_VER	0011

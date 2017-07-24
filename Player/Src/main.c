@@ -63,6 +63,7 @@ UART_HandleTypeDef huart2;
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
 const uint16_t BatStatus24[8] = {205,211,218,225,232,239,245,251};
+const uint16_t BatStatus48[8] = {420,426,434,443,452,461,470,480};
 
 volatile uint32_t hall_count = 0;
 uint32_t keycode=0;
@@ -388,8 +389,8 @@ void InitConfig(void)
 	bike.Play 	= 0;
 	bike.Codec 	= 0;
 	
-	config.SysVoltage = 24;
-	BatStatus = BatStatus24;
+	config.SysVoltage = SYS_VOLTAGE;
+	BatStatus = BAT_STATUS;
 }
 
 void WriteConfig(void)
@@ -433,29 +434,48 @@ uint32_t GetBatStatus(uint32_t vol)
 {
 	uint32_t i;
 	
-	for(i=0;i<COUNTOF(BatStatus24);i++)
-		if ( vol < BatStatus[i] ) break;
+	for(i=0;i<COUNTOF(BAT_STATUS);i++)
+		if ( vol < BAT_STATUS[i] ) break;
 	return i;
 }
+
 
 void MileTask(void)
 {
 	static uint32_t Fmile = 0;
+	static uint32_t time = 0;
 	uint32_t speed;
 	
 	speed = bike.Speed;
 	if ( speed > DISPLAY_MAX_SPEED ) speed = DISPLAY_MAX_SPEED;
-	
-	Fmile = Fmile + speed;
-	if(Fmile > 36000)
-	{
-		Fmile = 0;
-		bike.Mile++;
-		if ( bike.Mile > 99999 )
+
+#ifdef SINGLE_TRIP
+	time ++;
+	if ( time < 20 ) {	//2s
+		bike.Mile = config.Mile;
+	} else if ( time < 50 ) { 	//5s
+		if ( speed ) {
+			time = 50;
 			bike.Mile = 0;
-		config.Mile = bike.Mile;
-		WriteConfig();
-	}  
+		}
+	} else if ( time == 50 ){
+		bike.Mile = 0;
+	} else 
+#endif	
+	{
+		time = 50;
+		
+		Fmile = Fmile + speed;
+		if(Fmile >= 36000)
+		{
+			Fmile = 0;
+			bike.Mile++;
+			if ( bike.Mile > 99999 )	bike.Mile = 0;
+			config.Mile ++;
+			if ( config.Mile > 99999 )	config.Mile = 0;
+			WriteConfig();
+		}  
+	}
 }
 
 void BikeTask(void)
@@ -912,19 +932,19 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 	static uint32_t pre_tick=0;
 	uint32_t speed,tick;
 	
-  if (GPIO_Pin == GPIO_PIN_6)
-  {
-    hall_count++;
+	if (GPIO_Pin == GPIO_PIN_6)
+	{
+		hall_count++;
 		tick = HAL_GetTick();
 		if ( tick >= pre_tick ) speed = tick - pre_tick;
 		else speed = UINT32_MAX - pre_tick + tick;
 		pre_tick = tick;
 
 		if ( speed )
-			bike.Speed = PERIMETER * 60 * 60 / 1000 / speed;	
+			bike.Speed = PERIMETER * 60 * 60 / 1000 / speed / PULSE_C;	
 		else
 			bike.Speed = 0;
-  }
+	}
 }
 #endif
 /* USER CODE END 0 */
