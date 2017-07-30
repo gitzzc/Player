@@ -932,6 +932,7 @@ void MediaStatusTask(void)
 						}
 						break;
 					case 0x41:
+ 						bike.Codec = 1;
 						if 		  ( stbuf[2] == 0x00 && stbuf[3] == 0x00 ){
 							bike.Media &= ~PM_FLASH;
 						} else if ( stbuf[2] == 0x01 && stbuf[3] == 0x00 ){ 
