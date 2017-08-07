@@ -57,6 +57,7 @@ typedef struct {
 	uint32_t Number;
 	uint32_t Media;
 	uint32_t PlayMedia;
+	uint32_t Value;
 	
 	uint32_t Hour;
 	uint32_t Minute;

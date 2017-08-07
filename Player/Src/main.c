@@ -74,6 +74,7 @@ int32_t temp_buf[10];
 uint8_t uart_buf[8];
 const uint16_t* BatStatus;
 uint8_t uart1_rx[32];
+uint32_t pre_hall_tick=0;
 
 BIKE_STATUS bike;
 BIKE_CONFIG config;
@@ -594,11 +595,11 @@ void TimeTask(void)
 	} 
 	if ( bike.time_set ) {		
 		key = GetKey(KEY_ALL);
-		if ( key == 0 && pre_key == KEY_PRE) {
+		if ( key == 0 && pre_key == KEY_NEXT ) {
 			pre_tick = HAL_GetTick();
 			bike.time_pos ++;
 			bike.time_pos %= 4;
-		} else if ( key == 0 && pre_key == KEY_NEXT ) {
+		} else if ( key == 0 && pre_key == KEY_PRE ) {
 			pre_tick = HAL_GetTick();
 			if ( bike.time_pos ) 
 				bike.time_pos--;
@@ -825,8 +826,14 @@ void MediaTask(void)
 	} else if ( key == KEY_PRE ) {
 		if ( press_count++ == 30 ){	//3s
 			key = 0;
-			cmd_buf[0] = 0xAA;cmd_buf[1] = 0x05;cmd_buf[2] = 0x00;cmd_buf[3] = 0x00;cmd_buf[4] = 0xEF;
-			if ( HAL_UART_Transmit(&huart1, cmd_buf, 5, 5000)!= HAL_OK)	Error_Handler();
+			if ( bike.PlayMedia == PM_FM ){
+				cmd_buf[0] = 0xAA;cmd_buf[1] = 0x05;cmd_buf[2] = 0x00;cmd_buf[3] = 0x00;cmd_buf[4] = 0xEF;
+				if ( HAL_UART_Transmit(&huart1, cmd_buf, 5, 5000)!= HAL_OK)	Error_Handler();
+			} else {
+				press_count = 30;
+				cmd_buf[0] = 0xAA;cmd_buf[1] = 0x04;cmd_buf[2] = 0x00;cmd_buf[3] = 0x00;cmd_buf[4] = 0xEF;
+				if ( HAL_UART_Transmit(&huart1, cmd_buf, 5, 5000)!= HAL_OK)	Error_Handler();
+			}
 		} else if ( press_count > 30 ){
 			key = 0;
 			press_count = 31;
@@ -834,8 +841,14 @@ void MediaTask(void)
 	} else if ( key == KEY_NEXT ) {
 		if ( press_count++ == 30 ){	//3s
 			key = 0;
-			cmd_buf[0] = 0xAA;cmd_buf[1] = 0x06;cmd_buf[2] = 0x00;cmd_buf[3] = 0x00;cmd_buf[4] = 0xEF;
-			if ( HAL_UART_Transmit(&huart1, cmd_buf, 5, 5000)!= HAL_OK)	Error_Handler();
+			if ( bike.PlayMedia == PM_FM ){
+				cmd_buf[0] = 0xAA;cmd_buf[1] = 0x06;cmd_buf[2] = 0x00;cmd_buf[3] = 0x00;cmd_buf[4] = 0xEF;
+				if ( HAL_UART_Transmit(&huart1, cmd_buf, 5, 5000)!= HAL_OK)	Error_Handler();
+			} else {
+				press_count = 30;
+				cmd_buf[0] = 0xAA;cmd_buf[1] = 0x04;cmd_buf[2] = 0x00;cmd_buf[3] = 0x00;cmd_buf[4] = 0xEF;
+				if ( HAL_UART_Transmit(&huart1, cmd_buf, 5, 5000)!= HAL_OK)	Error_Handler();
+			}
 		} else if ( press_count > 30 ){
 			key = 0;
 			press_count = 31;
@@ -996,21 +1009,21 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 #else
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
-	static uint32_t pre_tick=0;
+	//static uint32_t pre_tick=0;
 	uint32_t speed,tick;
 	
 	if (GPIO_Pin == GPIO_PIN_6)
 	{
 		hall_count++;
 		tick = HAL_GetTick();
-		if ( tick >= pre_tick ) speed = tick - pre_tick;
-		else speed = UINT32_MAX - pre_tick + tick;
-		pre_tick = tick;
+		if ( tick >= pre_hall_tick ) speed = tick - pre_hall_tick;
+		else speed = UINT32_MAX - pre_hall_tick + tick;
+		pre_hall_tick = tick;
 
 		if ( speed )
 			bike.Speed = PERIMETER * 60 * 60 / 1000 / speed / PULSE_C;	
-		else
-			bike.Speed = 0;
+		//else
+		//	bike.Speed = 0;
 	}
 }
 #endif
@@ -1101,10 +1114,9 @@ int main(void)
 			//IWDG_Feed();
 		}
 
-		if ( (tick >= tick_1s && (tick - tick_1s) > 1000 ) || \
-		(tick <  tick_1s && (0xFFFF - tick_1s + tick) > 1000 ) ) {
-			tick_1s = tick;
-			//SpeedTask();
+		if ( (tick >= pre_hall_tick && (tick - pre_hall_tick) == 1000 ) || \
+		(tick <  pre_hall_tick && (0xFFFF - pre_hall_tick + tick) == 1000 ) ) {
+			bike.Speed = 0;
 		}
 
 		//UartTask();
