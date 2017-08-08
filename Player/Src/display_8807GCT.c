@@ -58,7 +58,6 @@ void MenuUpdate(BIKE_STATUS* bike)
 	if		( bike->PlayMedia == PM_FM 	) BL_Data[16] |= 0x04;	//S16
 	else if ( bike->PlayMedia == PM_USB ) BL_Data[16] |= 0x08;	//S14
 	else if ( bike->PlayMedia == PM_BT	) BL_Data[16] |= 0x02;	//S15
-	if( bike->BT		) BL_Data[16]	|= 0x02;	//S15
 	if( bike->Play		) BL_Data[15]	|= 0x80;	//S19
 	else				  BL_Data[16]	|= 0x80;	//S20
 

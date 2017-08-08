@@ -65,7 +65,7 @@ UART_HandleTypeDef huart2;
 const uint16_t BatStatus24[8] = {205,211,218,225,232,239,245,251};
 const uint16_t BatStatus48[8] = {420,426,434,443,452,461,470,480};
 
-volatile uint32_t hall_count = 0;
+volatile uint32_t Speed_Sample = 0;
 uint32_t keycode=0;
 uint32_t tick_100ms=0,tick_10ms=0,tick_1s=0;
 uint32_t speed_buf[16];
@@ -328,7 +328,7 @@ uint32_t GetSpeed(void)
 	static uint32_t index = 0;
 	uint32_t speed;
 	uint32_t i;
-
+#if 0
 	speed = Adc_Get(ADC_SPEED_CH);
 	speed_buf[index++] = speed;
 	if ( index >= COUNTOF(speed_buf) )
@@ -346,18 +346,21 @@ uint32_t GetSpeed(void)
 		speed = speed*875/6144;	//36V->50KM/H
 	else if ( config.SysVoltage	== 24 )	// speed*5V*21/1024/12V*25 KM/H
 		speed = speed*875/4096;	//12V->25KM/H
+#else
+	speed_buf[index++] = Speed_Sample;
+	if ( index >= COUNTOF(speed_buf) )
+		index = 0;	
+	
+	for(i=0,speed=0;i<COUNTOF(speed_buf);i++)
+		speed += speed_buf[i];
+	speed /= COUNTOF(speed_buf);
+#endif
 	
 	if ( speed > 99 )
 		speed = 99;
 	
   return speed;
 }
-
-void SpeedTask(void)
-{
-	bike.Speed = hall_count * PERIMETER * 60 * 60 / 1000 / 1000;
-	hall_count = 0;
-}	
 
 void InitConfig(void)
 {
@@ -530,6 +533,7 @@ void BikeTask(void)
 
 	bike.Voltage 	= GetVol()*1000UL/config.VolScale;
 	//bike.Temperature= GetTemp()	*1000UL/config.TempScale;
+	bike.Speed 		= GetSpeed();
 	bike.Temperature= GetTemp();
 	bike.BatStatus 	= GetBatStatus(bike.Voltage);
 
@@ -742,6 +746,7 @@ void MediaTask(void)
 	static uint32_t index =0;
 	static uint8_t  value=0;
 	static uint16_t press_count=0;
+	static uint16_t reserach=50;
 	
 	uint32_t key;
 	uint8_t cmd_buf[16];
@@ -751,9 +756,15 @@ void MediaTask(void)
 
 	cmd_buf[0] = 0xAA;cmd_buf[1] = 0x00;cmd_buf[2] = 0x00;cmd_buf[3] = 0x00;cmd_buf[4] = 0xEF;
 	
-	if ( bike.Codec == 0 )
+	if ( bike.Codec == 0 ){
+		if ( reserach ++ >= 50 ){
+			reserach = 0;
+			cmd_buf[0] = 0xAA;cmd_buf[1] = 0x50;cmd_buf[2] = 0x00;cmd_buf[3] = 0x00;cmd_buf[4] = 0xEF;
+			if ( HAL_UART_Transmit(&huart1, cmd_buf, 5, 5000)!= HAL_OK)	Error_Handler();
+		}
 		return ;
-		
+	}
+	
 	if ( key == 0 ) {
 		if ( pre_key == KEY_PLAY ){
 			if ( bike.Play == 0 ) {
@@ -781,37 +792,43 @@ void MediaTask(void)
 			cmd_buf[1] = 0x04;
 			if ( HAL_UART_Transmit(&huart1, cmd_buf, 5, 5000)!= HAL_OK)	Error_Handler();
 		} else if ( pre_key == KEY_VOLUP ){
-			if ( ++bike.Value > 9 ) bike.Value = 9;			
 			cmd_buf[1] = 0x30;
-			cmd_buf[3] = bike.Value;
+			if ( bike.Value < 9 )	cmd_buf[3] = bike.Value + 1;
+			else cmd_buf[3] = bike.Value;
 			if ( HAL_UART_Transmit(&huart1, cmd_buf, 5, 5000)!= HAL_OK)	Error_Handler();
 		} else if ( pre_key == KEY_VOLDOWN ){
-			if ( bike.Value ) bike.Value --;			
 			cmd_buf[1] = 0x30;
-			cmd_buf[3] = bike.Value;
+			if ( bike.Value > 0 )	cmd_buf[3] = bike.Value - 1;
+			else cmd_buf[3] = bike.Value;
 			if ( HAL_UART_Transmit(&huart1, cmd_buf, 5, 5000)!= HAL_OK)	Error_Handler();
 		} else if ( pre_key == KEY_FM ){
 			if ( bike.PlayMedia == PM_FM ){
 				if ( bike.Media & PM_USB ){ 
+					bike.PlayMedia = PM_USB;
 					cmd_buf[0] = 0xAA;cmd_buf[1] = 0x40;cmd_buf[2] = 0x00;cmd_buf[3] = 0x01;cmd_buf[4] = 0xEF;
 					if ( HAL_UART_Transmit(&huart1, cmd_buf, 5, 5000)!= HAL_OK)	Error_Handler();
 				} else if ( bike.Media & PM_FLASH ){ 
+					bike.PlayMedia = PM_FLASH;
 					cmd_buf[0] = 0xAA;cmd_buf[1] = 0x40;cmd_buf[2] = 0x00;cmd_buf[3] = 0x00;cmd_buf[4] = 0xEF;
 					if ( HAL_UART_Transmit(&huart1, cmd_buf, 5, 5000)!= HAL_OK)	Error_Handler();
 				}
 			} else if ( bike.PlayMedia == PM_USB ){
 				if ( bike.Media & PM_FM ){ 
+					bike.PlayMedia = PM_FM;
 					cmd_buf[0] = 0xAA;cmd_buf[1] = 0x40;cmd_buf[2] = 0x00;cmd_buf[3] = 0x02;cmd_buf[4] = 0xEF;
 					if ( HAL_UART_Transmit(&huart1, cmd_buf, 5, 5000)!= HAL_OK)	Error_Handler();
 				} else if ( bike.Media & PM_FLASH ){ 
+					bike.PlayMedia = PM_FLASH;
 					cmd_buf[0] = 0xAA;cmd_buf[1] = 0x40;cmd_buf[2] = 0x00;cmd_buf[3] = 0x00;cmd_buf[4] = 0xEF;
 					if ( HAL_UART_Transmit(&huart1, cmd_buf, 5, 5000)!= HAL_OK)	Error_Handler();
 				}
 			} else if ( bike.PlayMedia == PM_FLASH ){
 				if ( bike.Media & PM_USB ){ 
+					bike.PlayMedia = PM_USB;
 					cmd_buf[0] = 0xAA;cmd_buf[1] = 0x40;cmd_buf[2] = 0x00;cmd_buf[3] = 0x01;cmd_buf[4] = 0xEF;
 					if ( HAL_UART_Transmit(&huart1, cmd_buf, 5, 5000)!= HAL_OK)	Error_Handler();
 				} else if ( bike.Media & PM_FM ){ 
+					bike.PlayMedia = PM_FM;
 					cmd_buf[0] = 0xAA;cmd_buf[1] = 0x40;cmd_buf[2] = 0x00;cmd_buf[3] = 0x00;cmd_buf[4] = 0xEF;
 					if ( HAL_UART_Transmit(&huart1, cmd_buf, 5, 5000)!= HAL_OK)	Error_Handler();
 				}
@@ -887,7 +904,7 @@ void MediaStatusTask(void)
 			Error_Handler();
 	} else {
 		while( len - head >= 5 ){
-			if ( uart1_rx[head] == 0xAB && uart1_rx[head+4] == 0xEF ){
+			if ( (uart1_rx[head] == 0xAB) && (uart1_rx[head+4] == 0xEF) ){
 				stbuf = uart1_rx+head;
 				head += 5;
 				switch(stbuf[1]){
@@ -936,13 +953,13 @@ void MediaStatusTask(void)
 						bike.Value = stbuf[3];
 						break;
 					case 0x40:
-						if 		  ( stbuf[2] == 0x00 && stbuf[3] == 0x00 ){ 
+						/*if 		  ( stbuf[2] == 0x00 && stbuf[3] == 0x00 ){ 
 							config.PlayMedia = bike.PlayMedia = PM_FLASH;
 						} else if ( stbuf[2] == 0x00 && stbuf[3] == 0x01 ){ 
 							config.PlayMedia = bike.PlayMedia = PM_USB;
 						} else if ( stbuf[2] == 0x00 && stbuf[3] == 0x02 ){ 
 							config.PlayMedia = bike.PlayMedia = PM_FM;
-						}
+						}*/
 						break;
 					case 0x41:
  						bike.Codec = 1;
@@ -998,15 +1015,7 @@ static void EXTI4_15_IRQHandler_Config(void)
   * @param GPIO_Pin: Specifies the pins connected EXTI line
   * @retval None
   */
-#if 0
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
-{
-  if (GPIO_Pin == GPIO_PIN_6)
-  {
-    hall_count++;
-  }
-}
-#else
+
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
 	//static uint32_t pre_tick=0;
@@ -1014,19 +1023,18 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 	
 	if (GPIO_Pin == GPIO_PIN_6)
 	{
-		hall_count++;
 		tick = HAL_GetTick();
 		if ( tick >= pre_hall_tick ) speed = tick - pre_hall_tick;
 		else speed = UINT32_MAX - pre_hall_tick + tick;
 		pre_hall_tick = tick;
 
 		if ( speed )
-			bike.Speed = PERIMETER * 60 * 60 / 1000 / speed / PULSE_C;	
-		//else
-		//	bike.Speed = 0;
+			speed = PERIMETER * 60 * 60 / 1000 / speed / PULSE_C;	
+		if ( speed < 99 )
+			Speed_Sample = speed;
 	}
 }
-#endif
+
 /* USER CODE END 0 */
 
 int main(void)
@@ -1116,7 +1124,7 @@ int main(void)
 
 		if ( (tick >= pre_hall_tick && (tick - pre_hall_tick) == 1000 ) || \
 		(tick <  pre_hall_tick && (0xFFFF - pre_hall_tick + tick) == 1000 ) ) {
-			bike.Speed = 0;
+			Speed_Sample = 0;
 		}
 
 		//UartTask();

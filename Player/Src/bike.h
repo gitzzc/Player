@@ -40,7 +40,6 @@ typedef struct {
 	uint32_t ECO		:1;
 	uint32_t R			:1;
 	uint32_t Charge		:1;
-	uint32_t USB		:1;
 	uint32_t BT			:1;
 	uint32_t FMSearch	:1;
 	uint32_t Codec		:1;
