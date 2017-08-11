@@ -65,7 +65,9 @@ UART_HandleTypeDef huart2;
 const uint16_t BatStatus24[8] = {205,211,218,225,232,239,245,251};
 const uint16_t BatStatus48[8] = {420,426,434,443,452,461,470,480};
 
-volatile uint32_t Speed_Sample = 0;
+volatile uint32_t Hall_hz = 0;
+volatile uint32_t pre_hall_tick= 0;
+
 uint32_t keycode=0;
 uint32_t tick_100ms=0,tick_10ms=0,tick_1s=0;
 uint32_t speed_buf[16];
@@ -73,8 +75,9 @@ uint32_t vol_buf[32];
 int32_t temp_buf[10];
 uint8_t uart_buf[8];
 const uint16_t* BatStatus;
+
 uint8_t uart1_rx[32];
-uint32_t pre_hall_tick=0;
+uint8_t uart2_rx[32];
 
 BIKE_STATUS bike;
 BIKE_CONFIG config;
@@ -347,7 +350,7 @@ uint32_t GetSpeed(void)
 	else if ( config.SysVoltage	== 24 )	// speed*5V*21/1024/12V*25 KM/H
 		speed = speed*875/4096;	//12V->25KM/H
 #else
-	speed_buf[index++] = Speed_Sample;
+	speed_buf[index++] = Hall_hz;
 	if ( index >= COUNTOF(speed_buf) )
 		index = 0;	
 	
@@ -356,6 +359,7 @@ uint32_t GetSpeed(void)
 	speed /= COUNTOF(speed_buf);
 #endif
 	
+	speed = PERIMETER * 60 * 60 * speed / 1000 / 1000 / PULSE_C;
 	if ( speed > 99 )
 		speed = 99;
 	
@@ -588,6 +592,7 @@ void TimeTask(void)
 			if ( Get_ElapseTick(pre_tick) > 6000 ){
 				bike.time_pos = 0;
 				bike.time_set = 1; 
+				pre_key = KEY_PLAY;
 				pre_tick = HAL_GetTick();
 			}		
 		} else {
@@ -652,8 +657,10 @@ void TimeTask(void)
 		if ( Get_ElapseTick(pre_tick) > 30000 ){
 			bike.time_set = 0;
 		}
-		if ( GetKey(KEY_PLAY) ) {
-			if ( Get_ElapseTick(pre_tick) > 6000 ){
+		if ( key == KEY_PLAY && pre_key == 0 ) {
+		//if ( GetKey(KEY_PLAY) ) {
+		//	if ( Get_ElapseTick(pre_tick) > 6000 )
+			{
 				time_set_enable = 0;
 				bike.time_set = 0; 
 				pre_tick = HAL_GetTick();
@@ -674,33 +681,38 @@ void TimeTask(void)
 
 void UartTask(void)
 {   
-//  static uint32_t index = 0;
-//	uint8_t dat;
-//  
-//  if ( HAL_UART_Receive(&huart1, &dat, 1, 0) == HAL_OK ){
-//    uart_buf[index++] = dat;
-//    if ( index >= sizeof(uart_buf) ) index = 0;
-//		if ( index >= 1 && uart_buf[index-1] == '\n' ){
-//			if ( index >= 7 ){
-//				if ( uart_buf[0] == 'T' /*&& uart_buf[1] == 'i' && uart_buf[2] == 'm' && uart_buf[3] == 'e' */) {
-//					RtcTime.RTC_Hours 	= uart_buf[4];
-//					RtcTime.RTC_Minutes = uart_buf[5];
-//					RtcTime.RTC_Minutes = uart_buf[6];
-//					PCF8563_SetTime(PCF_Format_BIN,&RtcTime);
-//				}
-//			} else if ( uart_buf[0] == 'C' /*&& uart_buf[1] == 'a' && uart_buf[2] == 'l' && uart_buf[3] == 'i' */){
-//				bike.Voltage 		= GetVol();
-//				bike.Temperature= GetTemp();
-//				bike.Speed			= GetSpeed();
+	uint8_t* stbuf;
+	uint8_t cmd_buf[16];
+	uint8_t len,i;
+	uint16_t freq;
+	static uint16_t fm_freq_index=0,fm_search=0;
+	static uint8_t head=0;
 
-//				config.VolScale	= (unsigned long)bike.Voltage*1000UL/VOL_CALIBRATIOIN;					
-//				//config.TempScale= (long)bike.Temperature*1000UL/TEMP_CALIBRATIOIN;	
-//				config.SpeedScale = (unsigned long)bike.Speed*1000UL/SPEED_CALIBRATIOIN;				
-//				WriteConfig();
-//			}
-//			index = 0;
-//    }
-//  }
+	len = huart2.RxXferSize - huart2.RxXferCount;
+	if ( len == 0 )
+		return ;
+	
+	if ( (len > 12 ) && (uart2_rx[len-1] == '\n') ){
+		if ( uart2_rx[0] == 'T' && uart2_rx[1] == 'i' && uart2_rx[2] == 'm' && uart2_rx[3] == 'e' && uart2_rx[4] == ' ' ) {
+				RtcTime.RTC_Hours 	= (uart2_rx[ 5]-'0')*10 + (uart2_rx[ 6]-'0');
+				RtcTime.RTC_Minutes = (uart2_rx[ 8]-'0')*10 + (uart2_rx[ 9]-'0');
+				RtcTime.RTC_Seconds = (uart2_rx[11]-'0')*10 + (uart2_rx[12]-'0');
+				PCF8563_SetTime(PCF_Format_BIN,&RtcTime);
+		} else if ( uart2_rx[0] == 'C' && uart2_rx[1] == 'a' && uart2_rx[2] == 'l' && uart2_rx[3] == 'i' ){
+			bike.Voltage 	= GetVol();
+			bike.Temperature= GetTemp();
+			bike.Speed		= GetSpeed();
+
+			config.VolScale	= (unsigned long)bike.Voltage*1000UL/VOL_CALIBRATIOIN;					
+			//config.TempScale= (long)bike.Temperature*1000UL/TEMP_CALIBRATIOIN;	
+			config.SpeedScale = (unsigned long)bike.Speed*1000UL/SPEED_CALIBRATIOIN;				
+			WriteConfig();
+		}
+
+		huart2.RxState = HAL_UART_STATE_READY;
+		if(HAL_UART_Receive_IT(&huart2, (uint8_t *)uart2_rx, sizeof(uart2_rx)) != HAL_OK) 
+			Error_Handler();
+	}
 }
 
 void Calibration(void)
@@ -873,6 +885,7 @@ void MediaTask(void)
 	} else if ( key == KEY_FM && bike.PlayMedia == PM_FM ){
 		if ( press_count++ == 30 ){	//3s
 			key = 0;
+ 			bike.FMSearch = 1;
 			cmd_buf[0] = 0xAA;cmd_buf[1] = 0x07;cmd_buf[2] = 0x00;cmd_buf[3] = 0x00;cmd_buf[4] = 0xEF;
 			if ( HAL_UART_Transmit(&huart1, cmd_buf, 5, 5000)!= HAL_OK)	Error_Handler();
 		} else if ( press_count > 30 ){
@@ -887,7 +900,8 @@ void MediaStatusTask(void)
 {	
 	uint8_t* stbuf;
 	uint8_t cmd_buf[16];
-	uint8_t len,i,freq;
+	uint8_t len,i;
+	uint16_t freq;
 	static uint16_t fm_freq_index=0,fm_search=0;
 	static uint8_t head=0;
 
@@ -911,6 +925,11 @@ void MediaStatusTask(void)
 					case 0x00:
 						if ( stbuf[2] == 0 && stbuf[3] == 0 ){
  							bike.Codec = 1;
+							for(i=0;i<20;i++){
+								cmd_buf[0] = 0xAA;cmd_buf[1] = 0x02;cmd_buf[2] = 0x00;cmd_buf[3] = 0x00;cmd_buf[4] = 0xEF;
+								if ( HAL_UART_Transmit(&huart1, cmd_buf, 5, 5000)!= HAL_OK)	Error_Handler();
+								HAL_Delay(100);
+							}
 						}	
 						break;
 					case 0x01:
@@ -960,6 +979,8 @@ void MediaStatusTask(void)
 						} else if ( stbuf[2] == 0x00 && stbuf[3] == 0x02 ){ 
 							config.PlayMedia = bike.PlayMedia = PM_FM;
 						}*/
+						bike.Play = 1;
+						bike.Number = ((uint16_t)stbuf[2]<<8) | stbuf[3];
 						break;
 					case 0x41:
  						bike.Codec = 1;
@@ -969,10 +990,12 @@ void MediaStatusTask(void)
 							bike.Media |=  PM_FLASH;
 						} else if ( stbuf[2] == 0x00 && stbuf[3] == 0x01 ){ 
 							bike.Media &= ~PM_USB;
+							config.PlayMedia = bike.PlayMedia = PM_FM;
 						} else if ( stbuf[2] == 0x01 && stbuf[3] == 0x01 ){ 
 							bike.Media |=  PM_USB;
 						} else if ( stbuf[2] == 0x00 && stbuf[3] == 0x02 ){ 
 							bike.Media &= ~PM_FM;
+							config.PlayMedia = bike.PlayMedia = PM_USB;
 						} else if ( stbuf[2] == 0x01 && stbuf[3] == 0x02 ){ 
 							bike.Media |=  PM_FM;
 						}
@@ -1000,7 +1023,7 @@ static void EXTI4_15_IRQHandler_Config(void)
   __HAL_RCC_GPIOA_CLK_ENABLE();
 
   /* Configure PA.00 pin as input floating */
-  GPIO_InitStructure.Mode = GPIO_MODE_IT_FALLING;
+  GPIO_InitStructure.Mode = GPIO_MODE_IT_RISING;
   GPIO_InitStructure.Pull = GPIO_NOPULL;
   GPIO_InitStructure.Pin = GPIO_PIN_6;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStructure);
@@ -1019,19 +1042,17 @@ static void EXTI4_15_IRQHandler_Config(void)
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
 	//static uint32_t pre_tick=0;
-	uint32_t speed,tick;
+	uint32_t ms,tick;
 	
 	if (GPIO_Pin == GPIO_PIN_6)
 	{
 		tick = HAL_GetTick();
-		if ( tick >= pre_hall_tick ) speed = tick - pre_hall_tick;
-		else speed = UINT32_MAX - pre_hall_tick + tick;
+		if ( tick >= pre_hall_tick ) ms = tick - pre_hall_tick;
+		else ms = UINT32_MAX - pre_hall_tick + tick;
 		pre_hall_tick = tick;
 
-		if ( speed )
-			speed = PERIMETER * 60 * 60 / 1000 / speed / PULSE_C;	
-		if ( speed < 99 )
-			Speed_Sample = speed;
+		if ( ms > 3 )
+			Hall_hz = 1000/ms;
 	}
 }
 
@@ -1059,7 +1080,7 @@ int main(void)
 	MX_I2C1_Init();
 	//MX_TIM3_Init();
 	MX_USART1_UART_Init();
-	//MX_USART2_UART_Init();
+	MX_USART2_UART_Init();
 	MX_ADC_Init();
 	//MX_IWDG_Init();
 	EXTI4_15_IRQHandler_Config();
@@ -1081,6 +1102,8 @@ int main(void)
 	// bike.HasTimer = 1;
 	// bike.Hour = 0;
 	// bike.Minute = 1;
+	
+	//config.Mile = 100;
 
 	//YXT_Init();  
 
@@ -1102,15 +1125,15 @@ int main(void)
 		tick = HAL_GetTick();
  
 		if ( (tick >= tick_10ms && (tick - tick_10ms) > 10 ) || \
-			 (tick <  tick_10ms && (0xFFFF - tick_10ms + tick) > 10 ) ) {
+			 (tick <  tick_10ms && (UINT32_MAX - tick_10ms + tick) > 10 ) ) {
 			tick_10ms = tick;
 			KeyTask();
 		}
 
 		if ( (tick >= tick_100ms && (tick - tick_100ms) > 100 ) || \
-			 (tick <  tick_100ms && (0xFFFF - tick_100ms + tick) > 100 ) ) {
+			 (tick <  tick_100ms && (UINT32_MAX - tick_100ms + tick) > 100 ) ) {
 			tick_100ms = tick;
-
+				 
 			BikeTask();    
 			//YXT_Task(&bike);  
 			TimeTask();   
@@ -1118,16 +1141,18 @@ int main(void)
 			MediaStatusTask();
 			MenuUpdate(&bike);
 
+			__disable_irq ();
+			if ( (tick >= pre_hall_tick && (tick - pre_hall_tick) > 1000 ) || \
+				 (tick <  pre_hall_tick && (UINT32_MAX - pre_hall_tick + tick) > 1000 ) ) {
+				Hall_hz = 0;
+			}
+			__enable_irq ();
+				 
 			/* Reload IWDG counter */
 			//IWDG_Feed();
 		}
 
-		if ( (tick >= pre_hall_tick && (tick - pre_hall_tick) == 1000 ) || \
-		(tick <  pre_hall_tick && (0xFFFF - pre_hall_tick + tick) == 1000 ) ) {
-			Speed_Sample = 0;
-		}
-
-		//UartTask();
+		UartTask();
 	}
 	/* USER CODE END 3 */
 
@@ -1385,6 +1410,35 @@ static void MX_USART1_UART_Init(void)
 	
 }
 
+
+/* USART1 init function */
+static void MX_USART2_UART_Init(void)
+{
+  huart2.Instance = USART2;
+  huart2.Init.BaudRate = 115200;
+  huart2.Init.WordLength = UART_WORDLENGTH_8B;
+  huart2.Init.StopBits = UART_STOPBITS_1;
+  huart2.Init.Parity = UART_PARITY_NONE;
+  huart2.Init.Mode = UART_MODE_TX_RX;
+  huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart2.Init.OverSampling = UART_OVERSAMPLING_16;
+  huart2.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
+  huart2.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+  if(HAL_UART_DeInit(&huart2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_UART_Init(&huart2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  if(HAL_UART_Receive_IT(&huart2, (uint8_t *)uart2_rx, sizeof(uart2_rx)) != HAL_OK)
+  {
+    Error_Handler();
+  }
+}
+
 /**
   * @brief  Rx Transfer completed callback
   * @param  UartHandle: UART handle
@@ -1398,6 +1452,9 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *UartHandle)
 	if ( UartHandle == &huart1 ){
 		if(HAL_UART_Receive_IT(UartHandle, (uint8_t *)uart1_rx, sizeof(uart1_rx)) != HAL_OK) 
 			Error_Handler();
+	} else 	if ( UartHandle == &huart2 ){
+		if(HAL_UART_Receive_IT(UartHandle, (uint8_t *)uart2_rx, sizeof(uart2_rx)) != HAL_OK) 
+			Error_Handler();
 	}
 }
 
@@ -1410,28 +1467,11 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *UartHandle)
   */
  void HAL_UART_ErrorCallback(UART_HandleTypeDef *UartHandle)
 {
+	if ( UartHandle == &huart1 ){
 		if(HAL_UART_Receive_IT(UartHandle, (uint8_t *)uart1_rx, sizeof(uart1_rx)) != HAL_OK) Error_Handler();
-}
-
-/* USART2 init function */
-static void MX_USART2_UART_Init(void)
-{
-
-  huart2.Instance = USART2;
-  huart2.Init.BaudRate = 115200;
-  huart2.Init.WordLength = UART_WORDLENGTH_8B;
-  huart2.Init.StopBits = UART_STOPBITS_1;
-  huart2.Init.Parity = UART_PARITY_NONE;
-  huart2.Init.Mode = UART_MODE_TX_RX;
-  huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-  huart2.Init.OverSampling = UART_OVERSAMPLING_16;
-  huart2.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
-  huart2.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
-  if (HAL_UART_Init(&huart2) != HAL_OK)
-  {
-    Error_Handler();
-  }
-
+	} else if ( UartHandle == &huart2 ){
+		if(HAL_UART_Receive_IT(UartHandle, (uint8_t *)uart2_rx, sizeof(uart2_rx)) != HAL_OK) Error_Handler();
+	}
 }
 
 /** Configure pins as 

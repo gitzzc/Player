@@ -171,9 +171,9 @@
         <Bp>
           <Number>0</Number>
           <Type>0</Type>
-          <LineNumber>761</LineNumber>
+          <LineNumber>954</LineNumber>
           <EnabledFlag>1</EnabledFlag>
-          <Address>134231828</Address>
+          <Address>134231706</Address>
           <ByteObject>0</ByteObject>
           <HtxType>0</HtxType>
           <ManyObjects>0</ManyObjects>
@@ -182,7 +182,7 @@
           <BreakIfRCount>1</BreakIfRCount>
           <Filename>../Src/main.c</Filename>
           <ExecCommand></ExecCommand>
-          <Expression>\\PLAYER\../Src/main.c\761</Expression>
+          <Expression>\\PLAYER\../Src/main.c\954</Expression>
         </Bp>
       </Breakpoint>
       <WatchWindow1>
@@ -210,6 +210,11 @@
           <count>4</count>
           <WinNumber>1</WinNumber>
           <ItemText>keycode</ItemText>
+        </Ww>
+        <Ww>
+          <count>5</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>uart2_rx</ItemText>
         </Ww>
       </WatchWindow1>
       <MemoryWindow1>
