@@ -393,7 +393,7 @@ void InitConfig(void)
 	bike.Mile 	= config.Mile;
 	bike.YXTERR = 1;
 	bike.Media |= PM_FM;
-	bike.PlayMedia = config.PlayMedia;
+	//bike.PlayMedia = config.PlayMedia;
 	bike.Play 	= 0;
 	bike.Codec 	= 0;
 	
@@ -758,7 +758,7 @@ void MediaTask(void)
 	static uint32_t index =0;
 	static uint8_t  value=0;
 	static uint16_t press_count=0;
-	static uint16_t reserach=0;
+	static uint16_t reserach=30;
 	
 	uint32_t key;
 	uint8_t cmd_buf[16];
@@ -780,15 +780,18 @@ void MediaTask(void)
 	if ( key == 0 ) {
 		if ( pre_key == KEY_PLAY ){
 			if ( bike.Play == 0 ) {
-				if ( bike.PlayMedia == PM_FLASH ){
-					cmd_buf[0] = 0xAA;cmd_buf[1] = 0x40;cmd_buf[2] = 0x00;cmd_buf[3] = 0x00;cmd_buf[4] = 0xEF;
-				} else if ( bike.PlayMedia == PM_USB ){
-					cmd_buf[0] = 0xAA;cmd_buf[1] = 0x40;cmd_buf[2] = 0x00;cmd_buf[3] = 0x01;cmd_buf[4] = 0xEF;
-				} else if ( bike.PlayMedia == PM_FM ){
-					cmd_buf[0] = 0xAA;cmd_buf[1] = 0x40;cmd_buf[2] = 0x00;cmd_buf[3] = 0x02;cmd_buf[4] = 0xEF;
+				if ( bike.Codec == 1 ){
+					bike.Codec = 2;
+					if ( bike.PlayMedia == PM_FLASH ){
+						cmd_buf[0] = 0xAA;cmd_buf[1] = 0x40;cmd_buf[2] = 0x00;cmd_buf[3] = 0x00;cmd_buf[4] = 0xEF;
+					} else if ( bike.PlayMedia == PM_USB ){
+						cmd_buf[0] = 0xAA;cmd_buf[1] = 0x40;cmd_buf[2] = 0x00;cmd_buf[3] = 0x01;cmd_buf[4] = 0xEF;
+					} else if ( bike.PlayMedia == PM_FM ){
+						cmd_buf[0] = 0xAA;cmd_buf[1] = 0x40;cmd_buf[2] = 0x00;cmd_buf[3] = 0x02;cmd_buf[4] = 0xEF;
+					}
+					if ( HAL_UART_Transmit(&huart1, cmd_buf, 5, 5000)!= HAL_OK)	Error_Handler();
+					HAL_Delay(500);
 				}
-				if ( HAL_UART_Transmit(&huart1, cmd_buf, 5, 5000)!= HAL_OK)	Error_Handler();
-				HAL_Delay(100);
 				bike.Play = 1;
 				cmd_buf[1] = 0x01;cmd_buf[3] = 0x00;
 				if ( HAL_UART_Transmit(&huart1, cmd_buf, 5, 5000)!= HAL_OK)	Error_Handler();
@@ -839,7 +842,6 @@ void MediaTask(void)
 					if ( HAL_UART_Transmit(&huart1, cmd_buf, 5, 5000)!= HAL_OK)	Error_Handler();
 				}
 			}
-			bike.Play = 1;
 		}
 		press_count = 0;
 	} else if ( key == KEY_PRE ) {
@@ -919,7 +921,7 @@ void MediaStatusTask(void)
 					case 0x02:
 					case 0x03:
 					case 0x04:
-						//bike.Play = (stbuf[1] != 0x02);
+						bike.Play = (stbuf[1] != 0x02);
 						bike.Number = ((uint16_t)stbuf[2]<<8) | stbuf[3];
 						break;
 					case 0x05:
@@ -971,12 +973,12 @@ void MediaStatusTask(void)
 							bike.Media |=  PM_FLASH;
 						} else if ( stbuf[2] == 0x00 && stbuf[3] == 0x01 ){ 
 							bike.Media &= ~PM_USB;
-							config.PlayMedia = bike.PlayMedia = PM_FM;
+							//config.PlayMedia = bike.PlayMedia = PM_FM;
 						} else if ( stbuf[2] == 0x01 && stbuf[3] == 0x01 ){ 
 							bike.Media |=  PM_USB;
 						} else if ( stbuf[2] == 0x00 && stbuf[3] == 0x02 ){ 
 							bike.Media &= ~PM_FM;
-							config.PlayMedia = bike.PlayMedia = PM_USB;
+							//config.PlayMedia = bike.PlayMedia = PM_USB;
 						} else if ( stbuf[2] == 0x01 && stbuf[3] == 0x02 ){ 
 							bike.Media |=  PM_FM;
 						}

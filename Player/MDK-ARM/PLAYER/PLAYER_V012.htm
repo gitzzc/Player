@@ -3,7 +3,7 @@
 <title>Static Call Graph - [PLAYER\PLAYER_V012.axf]</title></head>
 <body><HR>
 <H1>Static Call Graph for image PLAYER\PLAYER_V012.axf</H1><HR>
-<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5050169: Last Updated: Fri Aug 18 23:57:53 2017
+<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5050169: Last Updated: Wed Aug 30 22:30:17 2017
 <BR><P>
 <H3>Maximum Stack Usage =        180 bytes + Unknown(Cycles, Untraceable Function Pointers)</H3><H3>
 Call chain for Maximum Stack Depth:</H3>
@@ -856,7 +856,7 @@ Global Symbols
 <P><STRONG><a name="[2]"></a>HardFault_Handler</STRONG> (Thumb, 4 bytes, Stack size 0 bytes, stm32f0xx_it.o(i.HardFault_Handler))
 <BR>[Address Reference Count : 1]<UL><LI> startup_stm32f030x8.o(RESET)
 </UL>
-<P><STRONG><a name="[88]"></a>InitConfig</STRONG> (Thumb, 200 bytes, Stack size 16 bytes, main.o(i.InitConfig))
+<P><STRONG><a name="[88]"></a>InitConfig</STRONG> (Thumb, 194 bytes, Stack size 16 bytes, main.o(i.InitConfig))
 <BR><BR>[Stack]<UL><LI>Max Depth = 16<LI>Call Chain = InitConfig
 </UL>
 <BR>[Calls]<UL><LI><a href="#[28]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_memset
@@ -873,7 +873,7 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[1f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
-<P><STRONG><a name="[92]"></a>MediaStatusTask</STRONG> (Thumb, 672 bytes, Stack size 16 bytes, main.o(i.MediaStatusTask))
+<P><STRONG><a name="[92]"></a>MediaStatusTask</STRONG> (Thumb, 698 bytes, Stack size 16 bytes, main.o(i.MediaStatusTask))
 <BR><BR>[Stack]<UL><LI>Max Depth = 24<LI>Call Chain = MediaStatusTask &rArr; __ARM_common_switch8
 </UL>
 <BR>[Calls]<UL><LI><a href="#[93]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__ARM_common_switch8
@@ -883,7 +883,7 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[1f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
-<P><STRONG><a name="[94]"></a>MediaTask</STRONG> (Thumb, 1306 bytes, Stack size 24 bytes, main.o(i.MediaTask))
+<P><STRONG><a name="[94]"></a>MediaTask</STRONG> (Thumb, 1322 bytes, Stack size 24 bytes, main.o(i.MediaTask))
 <BR><BR>[Stack]<UL><LI>Max Depth = 96<LI>Call Chain = MediaTask &rArr; HAL_UART_Transmit &rArr; UART_WaitOnFlagUntilTimeout
 </UL>
 <BR>[Calls]<UL><LI><a href="#[4f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_Delay

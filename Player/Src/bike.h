@@ -45,7 +45,7 @@ typedef struct {
 	uint32_t Charge		:1;
 	uint32_t BT			:1;
 	uint32_t FMSearch	:1;
-	uint32_t Codec		:1;
+	uint32_t Codec		:2;
 	uint32_t Play		:1;
 	uint32_t HasTimer	:1;
 	uint32_t time_set	:1;
