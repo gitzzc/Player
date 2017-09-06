@@ -7,13 +7,15 @@
 #include "bl55077.h"
 
 unsigned char flashflag = 0;
+unsigned char TL_Flash = 0;
+unsigned char TR_Flash = 0;
 
 const unsigned char SegDataTime[10] 	= {0xCF,0x06,0xAD,0x2F,0x66,0x6B,0xEB,0x07,0xEF,0x6F};
-const unsigned char SegDataVoltage[10]= {0x3F,0x06,0x5B,0x4F,0x66,0x6D,0x7D,0x0E,0x7F,0x6F};
+const unsigned char SegDataVoltage[10]	= {0x3F,0x06,0x5B,0x4F,0x66,0x6D,0x7D,0x0E,0x7F,0x6F};
 const unsigned char SegDataMile[10]		= {0x3F,0x06,0x5B,0x4F,0x66,0x6D,0x7D,0x0E,0x7F,0x6F};
 const unsigned char SegDataSpeed[10] 	= {0xCF,0x06,0xAD,0x2F,0x66,0x6B,0xEB,0x07,0xEF,0x6F};
 const unsigned char SegDataTemp[10] 	= {0x3F,0x06,0x6D,0x4F,0x56,0x5B,0x7B,0x07,0x7F,0x5F};
-const unsigned char SegDataNumber[10]			= {0x3F,0x06,0x5B,0x4F,0x66,0x6D,0x7D,0x0E,0x7F,0x6F};
+const unsigned char SegDataNumber[10]	= {0x3F,0x06,0x5B,0x4F,0x66,0x6D,0x7D,0x0E,0x7F,0x6F};
 
 
 void MenuUpdate(BIKE_STATUS* bike)
@@ -27,46 +29,60 @@ void MenuUpdate(BIKE_STATUS* bike)
 	for(i=0;i<sizeof(BL_Data);i++)
 		BL_Data[i] = 0x00;
    
-	if( bike->TurnLeft && flashflag <= 5 ){
-		BL_Data[ 0] |= 0x10;	//S0
-		HAL_GPIO_WritePin (TurnLeftOut_PORT	,TurnLeftOut_PIN	,GPIO_PIN_SET);
-	} else 
+	if( bike->TurnLeft ){
+		TL_Flash++;
+		TL_Flash %= 10;
+		if ( TL_Flash < 5 ){
+			BL_Data[ 0] |= 0x10;	//S0
+			HAL_GPIO_WritePin (TurnLeftOut_PORT	,TurnLeftOut_PIN	,GPIO_PIN_SET);
+		} else 
+			HAL_GPIO_WritePin (TurnLeftOut_PORT	,TurnLeftOut_PIN	,GPIO_PIN_RESET);
+	} else {
+		TL_Flash = 0;
 		HAL_GPIO_WritePin (TurnLeftOut_PORT	,TurnLeftOut_PIN	,GPIO_PIN_RESET);
+	}
 
-	if( bike->TurnRight&& flashflag <= 5 ){
-		BL_Data[10]	|= 0x80;	//S7
-		HAL_GPIO_WritePin (TurnRightOut_PORT,TurnRightOut_PIN	,GPIO_PIN_SET);
-	} else
+	if( bike->TurnRight ){
+		TR_Flash++;
+		TR_Flash %= 10;
+		if ( TR_Flash < 5 ){
+			BL_Data[10]	|= 0x80;	//S7
+			HAL_GPIO_WritePin (TurnRightOut_PORT,TurnRightOut_PIN	,GPIO_PIN_SET);
+		} else 
+			HAL_GPIO_WritePin (TurnLeftOut_PORT	,TurnLeftOut_PIN	,GPIO_PIN_RESET);
+	} else {
+		TR_Flash = 0;
 		HAL_GPIO_WritePin (TurnRightOut_PORT,TurnRightOut_PIN	,GPIO_PIN_RESET);
+	}
 	
 	if( bike->NearLight ){
-		BL_Data[ 3] |= 0x10;	//S2
+		BL_Data[ 3] |= 0x10;		//S2
 		HAL_GPIO_WritePin (NearLightOut_PORT,NearLightOut_PIN	,GPIO_PIN_SET);
 	} else
 		HAL_GPIO_WritePin (NearLightOut_PORT,NearLightOut_PIN	,GPIO_PIN_RESET);
 
-	if( bike->CRZLight	) BL_Data[ 1] 	|= 0x10;	//S1
-	if( bike->ECO 		) BL_Data[ 4] 	|= 0x01;	//S3
-	if( bike->R 		) BL_Data[ 5] 	|= 0x01;	//S4
-	//if( bike->HallERR	) BL_Data[5] 	|= 0x08;	//S		电机霍尔故障
-	//if( bike->WheelERR) BL_Data[5] 	|= 0x04;	//S		手把故障
-	//if( bike->ECUERR 	) BL_Data[15]	|= 0x20;	//S 	电机控制器故障
-	//if( bike->PhaseERR  ) BL_Data[12]	|= 0x80;	//S 	电机缺相故障
-	if( bike->Braked	) BL_Data[12]	|= 0x80;	//S9 
+	if( bike->CRZLight	) 	BL_Data[ 1] |= 0x10;	//S1
+	if( bike->ECO 		) 	BL_Data[ 4] |= 0x01;	//S3
+	if( bike->R 		) 	BL_Data[ 5] |= 0x01;	//S4
+	//if( bike->HallERR	) 	BL_Data[ 5]	|= 0x08;	//S		电机霍尔故障
+	//if( bike->WheelERR) 	BL_Data[ 5]	|= 0x04;	//S		手把故障
+	//if( bike->ECUERR 	) 	BL_Data[15]	|= 0x20;	//S 	电机控制器故障
+	//if( bike->PhaseERR) 	BL_Data[12]	|= 0x80;	//S 	电机缺相故障
+	if( bike->Braked	) 	BL_Data[12]	|= 0x80;	//S9 
 	
-	if( bike->Charge	) BL_Data[18]	|= 0x08;	//S10
-	if		( bike->PlayMedia == PM_FM 	) BL_Data[16] |= 0x04;	//S16
-	else if ( bike->PlayMedia == PM_USB ) BL_Data[16] |= 0x08;	//S14
-	else if ( bike->PlayMedia == PM_BT	) BL_Data[16] |= 0x02;	//S15
-	if( bike->Play		) BL_Data[15]	|= 0x80;	//S19
-	else				  BL_Data[16]	|= 0x80;	//S20
+	if	( bike->Charge	)	BL_Data[18]	|= 0x08;	//S10
+	if	( bike->Play ) 		BL_Data[15]	|= 0x80;	//S19
+	else 					BL_Data[16]	|= 0x80;	//S20
+	if		( bike->PlayMedia == PM_FM 	) 	BL_Data[16] |= 0x04;	//S16
+	else if ( bike->PlayMedia == PM_USB ) 	BL_Data[16] |= 0x08;	//S14
+	else if ( bike->PlayMedia == PM_BT	) 	BL_Data[16] |= 0x02;	//S15
 
 	/***************************Battery Area Display**********************************/
 	BL_Data[13] |= 0x80;	//Q1
 	switch ( bike->BatStatus ){
     case 0:
-		if ( flashflag > 5 ) BL_Data[13] &= ~0x80; //Q1
-			break;
+		if ( flashflag < 5 ) 
+			BL_Data[13] &=~0x80;break; //Q1
     case 1: BL_Data[19] |= 0x01;break;
     case 2: BL_Data[19] |= 0x05;break;
     case 3: BL_Data[19] |= 0x07;break;
@@ -94,7 +110,7 @@ void MenuUpdate(BIKE_STATUS* bike)
 		BL_Data[ 2] |= SegDataTime[bike->Minute	/10];
 		BL_Data[ 3] |= SegDataTime[bike->Minute	%10];       
 		if ( bike->time_set ){
-			if ( flashflag > 5 ) {
+			if ( flashflag < 5 ) {
 				switch ( bike->time_pos ){
 				case 0:BL_Data[ 0] &= 0x10; break;
 				case 1:BL_Data[ 1] &= 0x10; break;
@@ -104,7 +120,7 @@ void MenuUpdate(BIKE_STATUS* bike)
 				}
 			}
 			BL_Data[ 2] |= 0x10;	//S8 col
-		} else if ( flashflag <= 5 ) BL_Data[ 2] |= 0x10;	//S8 col
+		} else if ( flashflag < 5 ) BL_Data[ 2] |= 0x10;	//S8 col
 	}
 	
 	/*************************** Voltage Display**********************************/

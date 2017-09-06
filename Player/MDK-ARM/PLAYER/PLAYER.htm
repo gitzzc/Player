@@ -3,7 +3,7 @@
 <title>Static Call Graph - [PLAYER\PLAYER.axf]</title></head>
 <body><HR>
 <H1>Static Call Graph for image PLAYER\PLAYER.axf</H1><HR>
-<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5050169: Last Updated: Thu Aug 10 11:31:57 2017
+<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5050169: Last Updated: Wed Sep 06 13:52:27 2017
 <BR><P>
 <H3>Maximum Stack Usage =        180 bytes + Unknown(Cycles, Untraceable Function Pointers)</H3><H3>
 Call chain for Maximum Stack Depth:</H3>
@@ -315,8 +315,8 @@ Global Symbols
 <LI><a href="#[3b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;BikeTask
 </UL>
 
-<P><STRONG><a name="[3f]"></a>GetSpeed</STRONG> (Thumb, 96 bytes, Stack size 16 bytes, main.o(i.GetSpeed))
-<BR><BR>[Stack]<UL><LI>Max Depth = 28<LI>Call Chain = GetSpeed &rArr; __aeabi_uidivmod
+<P><STRONG><a name="[3f]"></a>GetSpeed</STRONG> (Thumb, 106 bytes, Stack size 24 bytes, main.o(i.GetSpeed))
+<BR><BR>[Stack]<UL><LI>Max Depth = 36<LI>Call Chain = GetSpeed &rArr; __aeabi_uidivmod
 </UL>
 <BR>[Calls]<UL><LI><a href="#[26]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_uidivmod
 </UL>
@@ -898,7 +898,7 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[1f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
-<P><STRONG><a name="[95]"></a>MenuUpdate</STRONG> (Thumb, 1956 bytes, Stack size 40 bytes, display_8807gct.o(i.MenuUpdate))
+<P><STRONG><a name="[95]"></a>MenuUpdate</STRONG> (Thumb, 2048 bytes, Stack size 40 bytes, display_8807gct.o(i.MenuUpdate))
 <BR><BR>[Stack]<UL><LI>Max Depth = 136<LI>Call Chain = MenuUpdate &rArr; BL_Write_Data &rArr; HAL_I2C_Master_Transmit &rArr; I2C_WaitOnTXISFlagUntilTimeout &rArr; I2C_IsAcknowledgeFailed
 </UL>
 <BR>[Calls]<UL><LI><a href="#[93]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__ARM_common_switch8

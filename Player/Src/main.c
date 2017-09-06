@@ -310,10 +310,10 @@ int32_t GetTemp(void)
 uint32_t GetVol(void)
 {
 	static uint32_t index = 0;
-  uint32_t vol;
-  uint32_t i;
+	uint32_t vol;
+	uint32_t i;
 
-  vol = Adc_Get(ADC_VOL_CH);
+	vol = Adc_Get(ADC_VOL_CH);
 	vol_buf[index++] = vol;
 	if ( index >= COUNTOF(vol_buf) )
 		index = 0;
@@ -321,7 +321,7 @@ uint32_t GetVol(void)
 		vol += vol_buf[i];
 	vol /= COUNTOF(vol_buf);
 	//adc*3.3V*21/4095 V
-  vol = vol*693/4095 ;
+	vol = vol*693/4095 ;
 	
   return vol;
 }
@@ -359,7 +359,7 @@ uint32_t GetSpeed(void)
 	speed /= COUNTOF(speed_buf);
 #endif
 	
-	speed = PERIMETER * 60 * 60 * speed / 1000 / 1000 / PULSE_C;
+	speed = PERIMETER * 60UL * 60UL * speed / 1000UL / 1000UL / PULSE_C / 13UL;
 	if ( speed > 99 )
 		speed = 99;
 	

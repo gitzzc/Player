@@ -57,6 +57,7 @@ typedef struct {
 	uint32_t Media;
 	uint32_t PlayMedia;
 	uint32_t Value;
+	uint32_t LRFlashCount;
 	
 	uint32_t Hour;
 	uint32_t Minute;
@@ -86,7 +87,7 @@ unsigned int Get_ElapseTick(unsigned int pre_tick);
 
 #define SINGLE_TRIP
 
-//#define SYS_VOLTAGE				24UL
+//#define SYS_VOLTAGE			24UL
 #define SYS_VOLTAGE				48UL
 
 #if ( SYS_VOLTAGE == 24UL )
@@ -131,16 +132,16 @@ unsigned int Get_ElapseTick(unsigned int pre_tick);
 #define SPMODE4_PORT		GPIOB
 #define SPMODE4_PIN			GPIO_PIN_1
 
-#define NearLight_PORT	GPIOB
+#define NearLight_PORT		GPIOB
 #define NearLight_PIN		GPIO_PIN_9
-#define TurnRight_PORT	GPIOB
+#define TurnRight_PORT		GPIOB
 #define TurnRight_PIN		GPIO_PIN_3
 #define TurnLeft_PORT		GPIOA
 #define TurnLeft_PIN		GPIO_PIN_15
-#define Beep_PORT				GPIOB
-#define Beep_PIN				GPIO_PIN_4
+#define Beep_PORT			GPIOB
+#define Beep_PIN			GPIO_PIN_4
 #define Brake_PORT			GPIOA
-#define Brake_PIN				GPIO_PIN_0
+#define Brake_PIN			GPIO_PIN_0
 //#define CRZLight_PORT		GPIOB
 //#define CRZLight_PIN		GPIO_PIN_1
 #define LRFlash_PORT		GPIOB
@@ -152,10 +153,10 @@ unsigned int Get_ElapseTick(unsigned int pre_tick);
 #define TurnLeftOut_PIN		GPIO_PIN_2
 #define TurnRightOut_PORT	GPIOB
 #define TurnRightOut_PIN	GPIO_PIN_10
-#define BeepOut_PORT			GPIOB
-#define BeepOut_PIN				GPIO_PIN_1
-#define BrakeOut_PORT			GPIOB
-#define BrakeOut_PIN			GPIO_PIN_11
+#define BeepOut_PORT		GPIOB
+#define BeepOut_PIN			GPIO_PIN_1
+#define BrakeOut_PORT		GPIOB
+#define BrakeOut_PIN		GPIO_PIN_11
 
 
 #define FM_PORT				GPIOA
@@ -167,21 +168,21 @@ unsigned int Get_ElapseTick(unsigned int pre_tick);
 #define Pre_PIN				GPIO_PIN_14
 #define Play_PORT			GPIOF
 #define Play_PIN			GPIO_PIN_1
-#define VolUp_PORT		GPIOC
+#define VolUp_PORT			GPIOC
 #define VolUp_PIN			GPIO_PIN_15
-#define VolDown_PORT	GPIOF
-#define VolDown_PIN		GPIO_PIN_0
+#define VolDown_PORT		GPIOF
+#define VolDown_PIN			GPIO_PIN_0
 
 #define KEY_NEXT			(1<<0)
 #define KEY_PRE				(1<<1)
 #define KEY_VOLUP			(1<<2)
-#define KEY_VOLDOWN		(1<<3)
+#define KEY_VOLDOWN			(1<<3)
 #define KEY_PLAY			(1<<4)
 #define KEY_CRZ				(1<<5)
-#define KEY_TURNLEFT	(1<<6)
-#define KEY_TURNRIGHT	(1<<7)
-#define KEY_LRFLASH		(1<<8)
-#define KEY_NEARLIGHT	(1<<9)
+#define KEY_TURNLEFT		(1<<6)
+#define KEY_TURNRIGHT		(1<<7)
+#define KEY_LRFLASH			(1<<8)
+#define KEY_NEARLIGHT		(1<<9)
 #define KEY_BEEP			(1<<10)
 #define KEY_BRAKE			(1<<11)
 #define KEY_FM				(1<<12)
