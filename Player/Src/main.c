@@ -67,6 +67,10 @@ const uint16_t BatStatus48[8] = {420,426,434,443,452,461,470,480};
 
 volatile uint32_t Hall_hz = 0;
 volatile uint32_t pre_hall_tick= 0;
+volatile uint32_t uwIC2Value1 = 0;
+volatile uint32_t uwIC2Value2 = 0;
+volatile uint32_t uwCaptureIndex=0;
+volatile uint32_t tim3_freq=0;
 
 uint32_t keycode=0;
 uint32_t tick_100ms=0,tick_10ms=0,tick_1s=0;
@@ -350,7 +354,8 @@ uint32_t GetSpeed(void)
 	else if ( config.SysVoltage	== 24 )	// speed*5V*21/1024/12V*25 KM/H
 		speed = speed*875/4096;	//12V->25KM/H
 #else
-	speed_buf[index++] = Hall_hz;
+	//speed_buf[index++] = Hall_hz;
+	speed_buf[index++] = uwIC2Value1
 	if ( index >= COUNTOF(speed_buf) )
 		index = 0;	
 	
@@ -359,7 +364,7 @@ uint32_t GetSpeed(void)
 	speed /= COUNTOF(speed_buf);
 #endif
 	
-	speed = PERIMETER * 60UL * 60UL * speed / 1000UL / 1000UL / PULSE_C / 13UL;
+	speed = PERIMETER * 60 * 60 * speed / 1000 / 1000 / PULSE_C / 13;
 	if ( speed > 99 )
 		speed = 99;
 	
@@ -1039,6 +1044,47 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 	}
 }
 
+/**
+  * @brief  Conversion complete callback in non blocking mode 
+  * @param  htim : hadc handle
+  * @retval None
+  */
+void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
+{
+  if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1)
+  {
+    if(uwCaptureIndex == 0)
+    {
+      /* Get the 1st Input Capture value */
+      uwIC2Value1 = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_2);
+      uwCaptureIndex = 1;
+    }
+    else
+    {
+      /* Get the 2nd Input Capture value */
+      uwIC2Value2 = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_2); 
+
+		if ( uwIC2Value2 >= uwIC2Value1 ) Hall_hz = tim3_freq/(uwIC2Value2 - uwIC2Value1);
+		else Hall_hz = tim3_freq / (UINT32_MAX - uwIC2Value1 + uwIC2Value2);
+		uwIC2Value1 = uwIC2Value2;
+
+		if ( ++uwCaptureIndex == 0 )
+		uwCaptureIndex = 1;
+    }
+  }
+}
+
+/**
+  * @brief  Period elapsed callback in non blocking mode
+  * @param  htim : TIM handle
+  * @retval None
+  */
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+	uwCaptureIndex = 0;
+	Hall_hz = 0;
+}
+
 /* USER CODE END 0 */
 
 int main(void)
@@ -1061,7 +1107,7 @@ int main(void)
 	/* Initialize all configured peripherals */
 	MX_GPIO_Init();
 	MX_I2C1_Init();
-	//MX_TIM3_Init();
+	MX_TIM3_Init();
 	MX_USART1_UART_Init();
 	MX_USART2_UART_Init();
 	MX_ADC_Init();
@@ -1308,7 +1354,6 @@ static void MX_IWDG_Init(void)
 /* TIM3 init function */
 static void MX_TIM3_Init(void)
 {
-
   TIM_ClockConfigTypeDef sClockSourceConfig;
   TIM_SlaveConfigTypeDef sSlaveConfig;
   TIM_MasterConfigTypeDef sMasterConfig;
@@ -1317,7 +1362,7 @@ static void MX_TIM3_Init(void)
   htim3.Instance = TIM3;
   htim3.Init.Prescaler = 0;
   htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim3.Init.Period = 0;
+  htim3.Init.Period = 0xFFFF;
   htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
@@ -1361,6 +1406,14 @@ static void MX_TIM3_Init(void)
     Error_Handler();
   }
 
+  tim3_freq = HAL_RCC_GetPCLK1Freq();
+  
+  if(HAL_TIM_IC_Start_IT(&htim3, TIM_CHANNEL_1) != HAL_OK)
+  {
+    /* Starting Error */
+    Error_Handler();
+  }
+  
 }
 
 /* USART1 init function */
