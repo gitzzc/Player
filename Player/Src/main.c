@@ -354,8 +354,7 @@ uint32_t GetSpeed(void)
 	else if ( config.SysVoltage	== 24 )	// speed*5V*21/1024/12V*25 KM/H
 		speed = speed*875/4096;	//12V->25KM/H
 #else
-	//speed_buf[index++] = Hall_hz;
-	speed_buf[index++] = uwIC2Value1
+	speed_buf[index++] = Hall_hz;
 	if ( index >= COUNTOF(speed_buf) )
 		index = 0;	
 	
@@ -1062,7 +1061,7 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
     else
     {
       /* Get the 2nd Input Capture value */
-      uwIC2Value2 = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_2); 
+      uwIC2Value2 = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1); 
 
 		if ( uwIC2Value2 >= uwIC2Value1 ) Hall_hz = tim3_freq/(uwIC2Value2 - uwIC2Value1);
 		else Hall_hz = tim3_freq / (UINT32_MAX - uwIC2Value1 + uwIC2Value2);
@@ -1112,7 +1111,7 @@ int main(void)
 	MX_USART2_UART_Init();
 	MX_ADC_Init();
 	//MX_IWDG_Init();
-	EXTI4_15_IRQHandler_Config();
+	//EXTI4_15_IRQHandler_Config();
 
 	/* USER CODE BEGIN 2 */
 	InitConfig();
@@ -1360,17 +1359,18 @@ static void MX_TIM3_Init(void)
   TIM_IC_InitTypeDef sConfigIC;
 
   htim3.Instance = TIM3;
-  htim3.Init.Prescaler = 0;
+  htim3.Init.Prescaler = 256;
   htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim3.Init.Period = 0xFFFF;
-  htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV4;
   htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
   {
     Error_Handler();
   }
+  HAL_TIM_Base_Start_IT(&htim3);
 
-  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  /*sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
   if (HAL_TIM_ConfigClockSource(&htim3, &sClockSourceConfig) != HAL_OK)
   {
     Error_Handler();
@@ -1395,7 +1395,7 @@ static void MX_TIM3_Init(void)
   if (HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig) != HAL_OK)
   {
     Error_Handler();
-  }
+  }*/
 
   sConfigIC.ICPolarity = TIM_INPUTCHANNELPOLARITY_FALLING;
   sConfigIC.ICSelection = TIM_ICSELECTION_DIRECTTI;
