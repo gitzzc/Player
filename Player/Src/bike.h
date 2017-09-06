@@ -7,6 +7,9 @@
   * @brief   
    ******************************************************************************
   * @Changlog
+  * V0.12	20170818
+  * 与解码芯片联调完成，
+  *
   * V0.11
   * 增加开机显示累计里程5秒，如果2秒后有速度则跳到显示单次里程
   * 增加支持24V，48V系统
@@ -42,7 +45,7 @@ typedef struct {
 	uint32_t Charge		:1;
 	uint32_t BT			:1;
 	uint32_t FMSearch	:1;
-	uint32_t Codec		:1;
+	uint32_t Codec		:2;
 	uint32_t Play		:1;
 	uint32_t HasTimer	:1;
 	uint32_t time_set	:1;
