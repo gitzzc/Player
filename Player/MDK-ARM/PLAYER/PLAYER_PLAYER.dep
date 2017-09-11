@@ -715,7 +715,7 @@ I (../Drivers/STM32F0xx_HAL_Driver/Inc/stm32f0xx_hal_tim.h)(0x593BA29D)
 I (../Drivers/STM32F0xx_HAL_Driver/Inc/stm32f0xx_hal_tim_ex.h)(0x593BA29D)
 I (../Drivers/STM32F0xx_HAL_Driver/Inc/stm32f0xx_hal_uart.h)(0x593BA29D)
 I (../Drivers/STM32F0xx_HAL_Driver/Inc/stm32f0xx_hal_uart_ex.h)(0x593BA29D)
-F (../Src/main.c)(0x59B0791F)(-c --cpu Cortex-M0 -D__MICROLIB -g -O0 --apcs=interwork --split_sections -I../Inc -I../Drivers/STM32F0xx_HAL_Driver/Inc -I../Drivers/STM32F0xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F0xx/Include -I../Drivers/CMSIS/Include --C99-I D:\Work\hc\Player\Firmware\Player\MDK-ARM\RTE-I C:\Keil_v5\ARM\PACK\ARM\CMSIS\5.0.1\CMSIS\Include-I C:\Keil_v5\ARM\PACK\Keil\STM32F0xx_DFP\1.5.0\Device\Include-D__UVISION_VERSION="515" -D_RTE_ -DSTM32F030x8 -DUSE_HAL_DRIVER -DSTM32F030x8-o player\main.o --omf_browse player\main.crf --depend player\main.d)
+F (../Src/main.c)(0x59B6B82C)(-c --cpu Cortex-M0 -D__MICROLIB -g -O0 --apcs=interwork --split_sections -I../Inc -I../Drivers/STM32F0xx_HAL_Driver/Inc -I../Drivers/STM32F0xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F0xx/Include -I../Drivers/CMSIS/Include --C99-I D:\Work\hc\Player\Firmware\Player\MDK-ARM\RTE-I C:\Keil_v5\ARM\PACK\ARM\CMSIS\5.0.1\CMSIS\Include-I C:\Keil_v5\ARM\PACK\Keil\STM32F0xx_DFP\1.5.0\Device\Include-D__UVISION_VERSION="515" -D_RTE_ -DSTM32F030x8 -DUSE_HAL_DRIVER -DSTM32F030x8-o player\main.o --omf_browse player\main.crf --depend player\main.d)
 I (C:\Keil_v5\ARM\ARMCC\include\stdlib.h)(0x54C245B8)
 I (C:\Keil_v5\ARM\ARMCC\include\string.h)(0x54C245B8)
 I (C:\Keil_v5\ARM\ARMCC\include\stdio.h)(0x54C245B8)

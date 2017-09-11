@@ -70,7 +70,7 @@ volatile uint32_t pre_hall_tick= 0;
 volatile uint32_t uwIC2Value1 = 0;
 volatile uint32_t uwIC2Value2 = 0;
 volatile uint32_t uwCaptureIndex=0;
-volatile uint32_t tim3_freq=0;
+volatile uint32_t tim3_freq=0,TimeOverFlag=0;
 
 uint32_t keycode=0;
 uint32_t tick_100ms=0,tick_10ms=0,tick_1s=0;
@@ -354,7 +354,8 @@ uint32_t GetSpeed(void)
 	else if ( config.SysVoltage	== 24 )	// speed*5V*21/1024/12V*25 KM/H
 		speed = speed*875/4096;	//12V->25KM/H
 #else
-	speed_buf[index++] = Hall_hz;
+	if ( Hall_hz < 2300 ) //99
+		speed_buf[index++] = Hall_hz;
 	if ( index >= COUNTOF(speed_buf) )
 		index = 0;	
 	
@@ -1050,27 +1051,35 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
   */
 void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
 {
-  if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1)
-  {
-    if(uwCaptureIndex == 0)
-    {
-      /* Get the 1st Input Capture value */
-      uwIC2Value1 = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_2);
-      uwCaptureIndex = 1;
-    }
-    else
-    {
-      /* Get the 2nd Input Capture value */
-      uwIC2Value2 = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1); 
+	if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1)
+	{
+		if(uwCaptureIndex == 0)
+		{
+			/* Get the 1st Input Capture value */
+			uwIC2Value1 = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
+			uwCaptureIndex = 1;
+		}
+		else
+		{
+			/* Get the 2nd Input Capture value */
+			uwIC2Value2 = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1); 
 
-		if ( uwIC2Value2 >= uwIC2Value1 ) Hall_hz = tim3_freq/(uwIC2Value2 - uwIC2Value1);
-		else Hall_hz = tim3_freq / (UINT32_MAX - uwIC2Value1 + uwIC2Value2);
-		uwIC2Value1 = uwIC2Value2;
+			if ( TimeOverFlag == 0 ){
+				if ( uwIC2Value2 >= uwIC2Value1 ) {
+					Hall_hz = tim3_freq / (uwIC2Value2 - uwIC2Value1);
+				} else {
+					Hall_hz = tim3_freq / (htim->Init.Period - uwIC2Value1 + uwIC2Value2 + 1);
+				}
+				//if ( Hall_hz > 50 )
+				//	Hall_hz = 0;
+			}
+			uwIC2Value1 = uwIC2Value2;
 
-		if ( ++uwCaptureIndex == 0 )
-		uwCaptureIndex = 1;
-    }
-  }
+			if ( ++uwCaptureIndex == 0 )
+				uwCaptureIndex = 1;
+			TimeOverFlag = 0;
+		}
+	}
 }
 
 /**
@@ -1080,8 +1089,18 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
   */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
-	uwCaptureIndex = 0;
-	Hall_hz = 0;
+	static uint32_t count=0;
+	static uint32_t uwPreIndex=0;
+	
+	TimeOverFlag = 1;
+	if ( uwPreIndex == uwCaptureIndex ){
+		if ( count ++ >= 3  ){
+			uwCaptureIndex = 0;
+			Hall_hz = 0;
+		}
+	} else 
+		count = 0;
+	uwPreIndex = uwCaptureIndex;
 }
 
 /* USER CODE END 0 */
@@ -1172,7 +1191,7 @@ int main(void)
 			__disable_irq ();
 			if ( (tick >= pre_hall_tick && (tick - pre_hall_tick) > 1000 ) || \
 				 (tick <  pre_hall_tick && (UINT32_MAX - pre_hall_tick + tick) > 1000 ) ) {
-				Hall_hz = 0;
+				//Hall_hz = 0;
 			}
 			__enable_irq ();
 				 
@@ -1370,7 +1389,7 @@ static void MX_TIM3_Init(void)
   }
   HAL_TIM_Base_Start_IT(&htim3);
 
-  /*sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
   if (HAL_TIM_ConfigClockSource(&htim3, &sClockSourceConfig) != HAL_OK)
   {
     Error_Handler();
@@ -1380,11 +1399,11 @@ static void MX_TIM3_Init(void)
   {
     Error_Handler();
   }
-
-  sSlaveConfig.SlaveMode = TIM_SLAVEMODE_RESET;
+/*
+  sSlaveConfig.SlaveMode = TIM_SLAVEMODE_DISABLE;
   sSlaveConfig.InputTrigger = TIM_TS_TI1FP1;
-  sSlaveConfig.TriggerPolarity = TIM_INPUTCHANNELPOLARITY_FALLING;
-  sSlaveConfig.TriggerFilter = 0;
+  sSlaveConfig.TriggerPolarity = TIM_INPUTCHANNELPOLARITY_RISING;
+  sSlaveConfig.TriggerFilter = 0x0F;
   if (HAL_TIM_SlaveConfigSynchronization(&htim3, &sSlaveConfig) != HAL_OK)
   {
     Error_Handler();
@@ -1397,16 +1416,16 @@ static void MX_TIM3_Init(void)
     Error_Handler();
   }*/
 
-  sConfigIC.ICPolarity = TIM_INPUTCHANNELPOLARITY_FALLING;
+  sConfigIC.ICPolarity = TIM_INPUTCHANNELPOLARITY_RISING;
   sConfigIC.ICSelection = TIM_ICSELECTION_DIRECTTI;
   sConfigIC.ICPrescaler = TIM_ICPSC_DIV1;
-  sConfigIC.ICFilter = 0;
+  sConfigIC.ICFilter = 0x0F;
   if (HAL_TIM_IC_ConfigChannel(&htim3, &sConfigIC, TIM_CHANNEL_1) != HAL_OK)
   {
     Error_Handler();
   }
 
-  tim3_freq = HAL_RCC_GetPCLK1Freq();
+  tim3_freq = HAL_RCC_GetPCLK1Freq()/256;
   
   if(HAL_TIM_IC_Start_IT(&htim3, TIM_CHANNEL_1) != HAL_OK)
   {
