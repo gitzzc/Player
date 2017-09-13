@@ -225,7 +225,7 @@ void KeyTask()
 	static uint32_t counter=0;
 	uint32_t key=0;
 
-	MX_GPIO_Init();
+	//MX_GPIO_Init();
 	
 	key |=!HAL_GPIO_ReadPin(Next_PORT	, Next_PIN		)?(KEY_NEXT		):0;
 	key |=!HAL_GPIO_ReadPin(Pre_PORT	, Pre_PIN		)?(KEY_PRE		):0;
@@ -292,10 +292,10 @@ int NTCtoTemp(unsigned int ntc)
 int32_t GetTemp(void)
 {
 	static uint32_t index = 0;
-  int32_t temp;
-  uint32_t i;
-	
-  temp = Adc_Get(ADC_TEMP_CH);
+	int32_t temp;
+	uint32_t i;
+
+	temp = Adc_Get(ADC_TEMP_CH);
 	temp_buf[index++] = temp;
 	if ( index >= COUNTOF(temp_buf) )
 		index = 0;
@@ -303,12 +303,12 @@ int32_t GetTemp(void)
 		temp += temp_buf[i];
 	temp /= COUNTOF(temp_buf);
 
-	temp = 10000*4096/(4096-temp)-10000;
+	temp = 10000*4096UL/(4096UL-temp)-10000;
 	temp = NTCtoTemp(temp);
 	
 	//temp = ((3600- (long)temp * 2905/4096)/10);
 	
-  return temp;
+	return temp;
 }
 
 uint32_t GetVol(void)
@@ -364,7 +364,8 @@ uint32_t GetSpeed(void)
 	speed /= COUNTOF(speed_buf);
 #endif
 	
-	speed = PERIMETER * 60 * 60 * speed / 1000 / 1000 / PULSE_C / 13;
+	//speed = PERIMETER * 60 * 60 * speed / 1000 / 1000 / PULSE_C / 13;
+	speed = PERIMETER * 36 * speed / 10 / 1000 / PULSE_C / 13;
 	if ( speed > 99 )
 		speed = 99;
 	
@@ -1051,6 +1052,10 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
   */
 void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
 {
+	uint32_t hz,i;
+	static uint32_t hz_buf[16];
+	static uint32_t index=0;
+	
 	if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1)
 	{
 		if(uwCaptureIndex == 0)
@@ -1064,14 +1069,21 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
 			/* Get the 2nd Input Capture value */
 			uwIC2Value2 = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1); 
 
-			if ( TimeOverFlag == 0 ){
-				if ( uwIC2Value2 >= uwIC2Value1 ) {
-					Hall_hz = tim3_freq / (uwIC2Value2 - uwIC2Value1);
-				} else {
-					Hall_hz = tim3_freq / (htim->Init.Period - uwIC2Value1 + uwIC2Value2 + 1);
+			if ( uwIC2Value2 > uwIC2Value1 ) {
+				hz = tim3_freq / (uwIC2Value2 - uwIC2Value1);
+			} else {
+				hz = tim3_freq / (htim->Init.Period - uwIC2Value1 + uwIC2Value2 + 1);
+			}
+			if ( hz < 200 )
+				Hall_hz = hz;
+			else {
+				hz_buf[index++] = hz;
+				if ( index >= 16 ) index = 0;
+				for(i=1;i<16;i++){
+					if (hz_buf[i] && labs(hz_buf[i-1]-hz_buf[i])*100/hz_buf[i] > 50 ) break;
 				}
-				//if ( Hall_hz > 50 )
-				//	Hall_hz = 0;
+				if ( i == 16 )
+					Hall_hz = hz;					
 			}
 			uwIC2Value1 = uwIC2Value2;
 
@@ -1092,9 +1104,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 	static uint32_t count=0;
 	static uint32_t uwPreIndex=0;
 	
-	TimeOverFlag = 1;
 	if ( uwPreIndex == uwCaptureIndex ){
-		if ( count ++ >= 3  ){
+		if ( count ++ >= 1  ){
 			uwCaptureIndex = 0;
 			Hall_hz = 0;
 		}
@@ -1112,6 +1123,7 @@ int main(void)
 	uint32_t i;
 	uint32_t tick;
 	uint8_t cmd_buf[5];
+	GPIO_InitTypeDef GPIO_InitStruct;
 	/* USER CODE END 1 */
 
 	/* MCU Configuration----------------------------------------------------------*/
@@ -1160,6 +1172,15 @@ int main(void)
 
 	//cmd_buf[0] = 0xAA;cmd_buf[1] = 0x30;cmd_buf[2] = 0x00;cmd_buf[3] = 0x01;cmd_buf[4] = 0xEF;
 	//if ( HAL_UART_Transmit(&huart1, cmd_buf, 5, 5000)!= HAL_OK)	Error_Handler();
+	
+	/*Configure GPIO pins : PA1 */
+	GPIO_InitStruct.Pin = GPIO_PIN_1;
+	GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+	GPIO_InitStruct.Pull = GPIO_NOPULL;
+	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+	HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+	
 	/* USER CODE END 2 */
 
 	/* Infinite loop */
@@ -1182,24 +1203,24 @@ int main(void)
 			tick_100ms = tick;
 				 
 			BikeTask();    
-			//YXT_Task(&bike);  
+			YXT_Task(&bike);  
 			TimeTask();   
-			MediaTask();
-			MediaStatusTask();
+			//MediaTask();
+			//MediaStatusTask();
 			MenuUpdate(&bike);
 
-			__disable_irq ();
-			if ( (tick >= pre_hall_tick && (tick - pre_hall_tick) > 1000 ) || \
-				 (tick <  pre_hall_tick && (UINT32_MAX - pre_hall_tick + tick) > 1000 ) ) {
-				//Hall_hz = 0;
-			}
-			__enable_irq ();
+//			__disable_irq ();
+//			if ( (tick >= pre_hall_tick && (tick - pre_hall_tick) > 1000 ) || \
+//				 (tick <  pre_hall_tick && (UINT32_MAX - pre_hall_tick + tick) > 1000 ) ) {
+//				//Hall_hz = 0;
+//			}
+//			__enable_irq ();
 				 
 			/* Reload IWDG counter */
 			//IWDG_Feed();
 		}
 
-		UartTask();
+		//UartTask();
 	}
 	/* USER CODE END 3 */
 
@@ -1252,17 +1273,6 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
-
-    /**Configure the Systick interrupt time 
-    */
-  HAL_SYSTICK_Config(HAL_RCC_GetHCLKFreq()/1000);
-
-    /**Configure the Systick 
-    */
-  HAL_SYSTICK_CLKSourceConfig(SYSTICK_CLKSOURCE_HCLK);
-
-  /* SysTick_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(SysTick_IRQn, 0, 0);
 }
 
 /* ADC init function */
@@ -1372,67 +1382,66 @@ static void MX_IWDG_Init(void)
 /* TIM3 init function */
 static void MX_TIM3_Init(void)
 {
-  TIM_ClockConfigTypeDef sClockSourceConfig;
-  TIM_SlaveConfigTypeDef sSlaveConfig;
-  TIM_MasterConfigTypeDef sMasterConfig;
-  TIM_IC_InitTypeDef sConfigIC;
+	TIM_ClockConfigTypeDef sClockSourceConfig;
+	TIM_SlaveConfigTypeDef sSlaveConfig;
+	TIM_MasterConfigTypeDef sMasterConfig;
+	TIM_IC_InitTypeDef sConfigIC;
 
-  htim3.Instance = TIM3;
-  htim3.Init.Prescaler = 256;
-  htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim3.Init.Period = 0xFFFF;
-  htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV4;
-  htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-  if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  HAL_TIM_Base_Start_IT(&htim3);
+	htim3.Instance = TIM3;
+	htim3.Init.Prescaler = 256;
+	htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
+	htim3.Init.Period = 0xFFFF;
+	htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV4;
+	htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+	if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
+	{
+		Error_Handler();
+	}
+	HAL_TIM_Base_Start_IT(&htim3);
 
-  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
-  if (HAL_TIM_ConfigClockSource(&htim3, &sClockSourceConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
+	sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+	if (HAL_TIM_ConfigClockSource(&htim3, &sClockSourceConfig) != HAL_OK)
+	{
+		Error_Handler();
+	}
 
-  if (HAL_TIM_IC_Init(&htim3) != HAL_OK)
-  {
-    Error_Handler();
-  }
-/*
-  sSlaveConfig.SlaveMode = TIM_SLAVEMODE_DISABLE;
-  sSlaveConfig.InputTrigger = TIM_TS_TI1FP1;
-  sSlaveConfig.TriggerPolarity = TIM_INPUTCHANNELPOLARITY_RISING;
-  sSlaveConfig.TriggerFilter = 0x0F;
-  if (HAL_TIM_SlaveConfigSynchronization(&htim3, &sSlaveConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
+	if (HAL_TIM_IC_Init(&htim3) != HAL_OK)
+	{
+		Error_Handler();
+	}
+	/*
+	sSlaveConfig.SlaveMode = TIM_SLAVEMODE_DISABLE;
+	sSlaveConfig.InputTrigger = TIM_TS_TI1FP1;
+	sSlaveConfig.TriggerPolarity = TIM_INPUTCHANNELPOLARITY_RISING;
+	sSlaveConfig.TriggerFilter = 0x0F;
+	if (HAL_TIM_SlaveConfigSynchronization(&htim3, &sSlaveConfig) != HAL_OK)
+	{
+		Error_Handler();
+	}
 
-  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
-  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-  if (HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }*/
+	sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+	sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+	if (HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig) != HAL_OK)
+	{
+		Error_Handler();
+	}*/
 
-  sConfigIC.ICPolarity = TIM_INPUTCHANNELPOLARITY_RISING;
-  sConfigIC.ICSelection = TIM_ICSELECTION_DIRECTTI;
-  sConfigIC.ICPrescaler = TIM_ICPSC_DIV1;
-  sConfigIC.ICFilter = 0x0F;
-  if (HAL_TIM_IC_ConfigChannel(&htim3, &sConfigIC, TIM_CHANNEL_1) != HAL_OK)
-  {
-    Error_Handler();
-  }
+	sConfigIC.ICPolarity = TIM_INPUTCHANNELPOLARITY_RISING;
+	sConfigIC.ICSelection = TIM_ICSELECTION_DIRECTTI;
+	sConfigIC.ICPrescaler = TIM_ICPSC_DIV1;
+	sConfigIC.ICFilter = 0x0F;
+	if (HAL_TIM_IC_ConfigChannel(&htim3, &sConfigIC, TIM_CHANNEL_1) != HAL_OK)
+	{
+		Error_Handler();
+	}
 
-  tim3_freq = HAL_RCC_GetPCLK1Freq()/256;
-  
-  if(HAL_TIM_IC_Start_IT(&htim3, TIM_CHANNEL_1) != HAL_OK)
-  {
-    /* Starting Error */
-    Error_Handler();
-  }
-  
+	tim3_freq = HAL_RCC_GetPCLK1Freq()/256;
+
+	if(HAL_TIM_IC_Start_IT(&htim3, TIM_CHANNEL_1) != HAL_OK)
+	{
+		/* Starting Error */
+		Error_Handler();
+	}
 }
 
 /* USART1 init function */
