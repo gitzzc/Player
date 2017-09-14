@@ -114,7 +114,7 @@ void SysTick_Handler(void)
   HAL_IncTick();
   HAL_SYSTICK_IRQHandler();
   /* USER CODE BEGIN SysTick_IRQn 1 */
-	HAL_GPIO_TogglePin(GPIOA,GPIO_PIN_1);
+
   /* USER CODE END SysTick_IRQn 1 */
 }
 
@@ -124,6 +124,9 @@ void SysTick_Handler(void)
 /* For the available peripheral interrupt handler names,                      */
 /* please refer to the startup file (startup_stm32f0xx.s).                    */
 /******************************************************************************/
+
+
+/* USER CODE BEGIN 1 */
 
 /**
 * @brief This function handles TIM3 global interrupt.
@@ -138,18 +141,6 @@ void TIM3_IRQHandler(void)
 
   /* USER CODE END TIM3_IRQn 1 */
 }
-
-/* USER CODE BEGIN 1 */
-/**
-  * @brief  This function handles external line 0 interrupt request.
-  * @param  None
-  * @retval None
-  */
-void EXTI4_15_IRQHandler(void)
-{
-  HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_6);
-}
-
 /**
   * @brief  This function handles UART interrupt request.  
   * @param  None

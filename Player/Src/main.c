@@ -225,7 +225,7 @@ void KeyTask()
 	static uint32_t counter=0;
 	uint32_t key=0;
 
-	//MX_GPIO_Init();
+	MX_GPIO_Init();
 	
 	key |=!HAL_GPIO_ReadPin(Next_PORT	, Next_PIN		)?(KEY_NEXT		):0;
 	key |=!HAL_GPIO_ReadPin(Pre_PORT	, Pre_PIN		)?(KEY_PRE		):0;
@@ -1000,52 +1000,6 @@ void MediaStatusTask(void)
 
 
 /**
-  * @brief  Configures EXTI line 0 (connected to PA.00 pin) in interrupt mode
-  * @param  None
-  * @retval None
-  */
-static void EXTI4_15_IRQHandler_Config(void)
-{
-  GPIO_InitTypeDef   GPIO_InitStructure;
-
-  /* Enable GPIOA clock */
-  __HAL_RCC_GPIOA_CLK_ENABLE();
-
-  /* Configure PA.00 pin as input floating */
-  GPIO_InitStructure.Mode = GPIO_MODE_IT_RISING;
-  GPIO_InitStructure.Pull = GPIO_NOPULL;
-  GPIO_InitStructure.Pin = GPIO_PIN_6;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStructure);
-
-  /* Enable and set EXTI line 0 Interrupt to the lowest priority */
-  HAL_NVIC_SetPriority(EXTI4_15_IRQn, 2, 0);
-  HAL_NVIC_EnableIRQ(EXTI4_15_IRQn);
-}
-
-/**
-  * @brief EXTI line detection callbacks
-  * @param GPIO_Pin: Specifies the pins connected EXTI line
-  * @retval None
-  */
-
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
-{
-	//static uint32_t pre_tick=0;
-	uint32_t ms,tick;
-	
-	if (GPIO_Pin == GPIO_PIN_6)
-	{
-		tick = HAL_GetTick();
-		if ( tick >= pre_hall_tick ) ms = tick - pre_hall_tick;
-		else ms = UINT32_MAX - pre_hall_tick + tick;
-		pre_hall_tick = tick;
-
-		if ( ms > 3 )
-			Hall_hz = 1000/ms;
-	}
-}
-
-/**
   * @brief  Conversion complete callback in non blocking mode 
   * @param  htim : hadc handle
   * @retval None
@@ -1142,7 +1096,6 @@ int main(void)
 	MX_USART2_UART_Init();
 	MX_ADC_Init();
 	//MX_IWDG_Init();
-	//EXTI4_15_IRQHandler_Config();
 
 	/* USER CODE BEGIN 2 */
 	InitConfig();
@@ -1170,17 +1123,6 @@ int main(void)
 	BL55077_Config(0);
 	//while ( HAL_GetTick() < PON_ALLON_TIME*2 ) ;//IWDG_Feed();
 
-	//cmd_buf[0] = 0xAA;cmd_buf[1] = 0x30;cmd_buf[2] = 0x00;cmd_buf[3] = 0x01;cmd_buf[4] = 0xEF;
-	//if ( HAL_UART_Transmit(&huart1, cmd_buf, 5, 5000)!= HAL_OK)	Error_Handler();
-	
-	/*Configure GPIO pins : PA1 */
-	GPIO_InitStruct.Pin = GPIO_PIN_1;
-	GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-	GPIO_InitStruct.Pull = GPIO_NOPULL;
-	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-	HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-	
 	/* USER CODE END 2 */
 
 	/* Infinite loop */
@@ -1205,22 +1147,15 @@ int main(void)
 			BikeTask();    
 			YXT_Task(&bike);  
 			TimeTask();   
-			//MediaTask();
-			//MediaStatusTask();
+			MediaTask();
+			MediaStatusTask();
 			MenuUpdate(&bike);
-
-//			__disable_irq ();
-//			if ( (tick >= pre_hall_tick && (tick - pre_hall_tick) > 1000 ) || \
-//				 (tick <  pre_hall_tick && (UINT32_MAX - pre_hall_tick + tick) > 1000 ) ) {
-//				//Hall_hz = 0;
-//			}
-//			__enable_irq ();
 				 
 			/* Reload IWDG counter */
 			//IWDG_Feed();
 		}
 
-		//UartTask();
+		UartTask();
 	}
 	/* USER CODE END 3 */
 
