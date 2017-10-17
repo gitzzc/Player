@@ -49,7 +49,7 @@ void MenuUpdate(BIKE_STATUS* bike)
 			BL_Data[10]	|= 0x80;	//S7
 			HAL_GPIO_WritePin (TurnRightOut_PORT,TurnRightOut_PIN	,GPIO_PIN_SET);
 		} else 
-			HAL_GPIO_WritePin (TurnLeftOut_PORT	,TurnLeftOut_PIN	,GPIO_PIN_RESET);
+			HAL_GPIO_WritePin (TurnRightOut_PORT,TurnRightOut_PIN	,GPIO_PIN_RESET);
 	} else {
 		TR_Flash = 0;
 		HAL_GPIO_WritePin (TurnRightOut_PORT,TurnRightOut_PIN	,GPIO_PIN_RESET);
