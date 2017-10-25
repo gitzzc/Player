@@ -7,6 +7,9 @@
   * @brief   
    ******************************************************************************
   * @Changlog
+  * V0.14	20171025
+  * 增加清里程功能
+  *
   * V0.13	20171017
   * 改下右转灯不闪烁的问题，
   *
@@ -35,6 +38,7 @@ typedef struct {
 	uint32_t TurnLeft	:1;
 	uint32_t TurnRight	:1;
 	uint32_t LRFlash	:1;
+	uint32_t MileFlash	:1;	
 	uint32_t Cruise		:1;
 	uint32_t ECUERR		:1;
 	uint32_t Braked		:1;
@@ -59,6 +63,7 @@ typedef struct {
 	uint32_t BatStatus;
 	uint32_t Speed;
 	uint32_t Mile;
+	uint32_t FMile;
 	uint32_t Number;
 	uint32_t Media;
 	uint32_t PlayMedia;
@@ -92,6 +97,7 @@ unsigned int Get_ElapseTick(unsigned int pre_tick);
 /******************************************************************************/
 
 #define SINGLE_TRIP
+#define RESET_MILE_ENABLE
 
 //#define SYS_VOLTAGE			24UL
 #define SYS_VOLTAGE				48UL

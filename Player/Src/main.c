@@ -454,9 +454,62 @@ uint32_t GetBatStatus(uint32_t vol)
 }
 
 
+#define TASK_INIT	0
+#define TASK_STEP1	1
+#define TASK_STEP2	2
+#define TASK_STEP3	3
+#define TASK_STEP4	4
+#define TASK_EXIT	5
+
+unsigned char MileResetTask(void)
+{
+	static unsigned int pre_tick=0;
+	static unsigned char TaskFlag = TASK_INIT;
+	static unsigned char lastLight = 0;
+	static unsigned char count = 0;
+	
+	if ( Get_ElapseTick(pre_tick) > 10000 | bike.Braked | bike.Speed )
+		TaskFlag = TASK_EXIT;
+
+	switch( TaskFlag ){
+	case TASK_INIT:
+		if ( HAL_GetTick() < 3000 && bike.TurnRight == 1 ){
+			TaskFlag = TASK_STEP1;
+			count = 0;
+		}
+		break;
+	case TASK_STEP1:
+		if ( lastLight == 0 && bike.NearLight){
+			pre_tick = HAL_GetTick();
+			count ++;
+			if ( count >= 8 ){
+				bike.MileFlash = 1;
+				bike.Mile = config.Mile;
+				TaskFlag = TASK_STEP2;
+			}
+		}
+		lastLight = bike.NearLight;
+		break;
+	case TASK_STEP2:
+		if ( bike.TurnRight == 0 && bike.TurnLeft == 1 ) {
+			TaskFlag = TASK_EXIT;
+			bike.MileFlash 	= 0;
+			bike.FMile 		= 0;
+			bike.Mile 		= 0;
+			config.Mile 	= 0;
+			WriteConfig();
+		}
+		break;
+	case TASK_EXIT:
+	default:
+		bike.MileFlash = 0;
+		break;
+	}
+	return 0;
+}
+
 void MileTask(void)
 {
-	static uint32_t Fmile = 0;
 	static uint32_t time = 0;
 	uint32_t speed;
 	
@@ -477,12 +530,12 @@ void MileTask(void)
 	} else 
 #endif	
 	{
-		time = 50;
+		time = 51;
 		
-		Fmile = Fmile + speed;
-		if(Fmile >= 36000)
+		bike.FMile = bike.FMile + speed;
+		if(bike.FMile >= 36000)
 		{
-			Fmile = 0;
+			bike.FMile = 0;
 			bike.Mile++;
 			if ( bike.Mile > 99999 )	bike.Mile = 0;
 			config.Mile ++;
@@ -582,6 +635,11 @@ void BikeTask(void)
 	}
 	
 	MileTask();
+	
+#ifdef RESET_MILE_ENABLE	
+	MileResetTask();
+#endif	
+	
 }
 
 void TimeTask(void)
