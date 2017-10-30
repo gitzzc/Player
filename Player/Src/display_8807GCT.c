@@ -105,10 +105,10 @@ void MenuUpdate(BIKE_STATUS* bike)
 		
 	/***************************Time Area Display**********************************/
 	if ( bike->HasTimer )	{
-		BL_Data[ 0] |= SegDataTime[bike->Hour	/10];
-		BL_Data[ 1] |= SegDataTime[bike->Hour	%10];
-		BL_Data[ 2] |= SegDataTime[bike->Minute	/10];
-		BL_Data[ 3] |= SegDataTime[bike->Minute	%10];       
+		BL_Data[ 0] |= SegDataTime[(bike->Hour  /10)    %6];
+		BL_Data[ 1] |= SegDataTime[ bike->Hour  %10];
+		BL_Data[ 2] |= SegDataTime[(bike->Minute /10)   %6];
+		BL_Data[ 3] |= SegDataTime[ bike->Minute %10];       
 		if ( bike->time_set ){
 			if ( flashflag < 5 ) {
 				switch ( bike->time_pos ){
